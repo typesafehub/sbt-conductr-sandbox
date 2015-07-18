@@ -4,6 +4,7 @@ import com.typesafe.conductr.sbt.{ ConductRKeys, ConductRPlugin }
 import com.typesafe.sbt.bundle.Import.BundleKeys
 import com.typesafe.sbt.bundle.SbtBundle
 import sbt._
+import sbt.Keys._
 
 import scala.util.Try
 
@@ -21,7 +22,7 @@ object Import {
       "The Docker image to use. By default `conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `conductr/conductr`."
     )
 
-    val ports = SettingKey[Set[Int]](
+    val ports = TaskKey[Set[Int]](
       "conductr-sandbox-ports",
       "A sequence of ports to be made public by each of the ConductR containers. By default, this will be initialized to the `endpoints` setting's service ports declared for `sbt-bundle`."
     )
@@ -45,25 +46,22 @@ object ConductRSandbox extends AutoPlugin {
 
   val autoImport = Import
 
-  override def `requires` = ConductRPlugin && SbtBundle
-
-  override def trigger = AllRequirements
-
   override def projectSettings = Seq(
     envs := Map.empty,
     image := "conductr/conductr-dev",
-    ports := BundleKeys.endpoints.value.flatMap {
-      case (_, endpoint) =>
-        endpoint.services.map { uri =>
-          if (uri.getHost != null) uri.getPort else uri.getAuthority.drop(1).toInt
-        }.collect {
-          case port if port >= 0 => port
-        }
-    }.toSet,
+    ports := Project.extract(state.value).getOpt(BundleKeys.endpoints).getOrElse(Map.empty)
+      .flatMap {
+        case (_, endpoint) =>
+          endpoint.services.map { uri =>
+            if (uri.getHost != null) uri.getPort else uri.getAuthority.drop(1).toInt
+          }.collect {
+            case port if port >= 0 => port
+          }
+      }.toSet,
     logLevel := "info",
     nrOfContainers := 1,
 
-    ConductRKeys.conductrControlServerUrl := url(s"http://${resolveDockerHostIp()}:$ConductrPort")
+    ConductRKeys.conductrControlServerUrl in Global := url(s"http://${resolveDockerHostIp()}:$ConductrPort")
   )
 
   private final val ConductrPort = 9005
