@@ -1,8 +1,7 @@
 package com.typesafe.sbt.conductrsandbox
 
-import com.typesafe.conductr.sbt.{ ConductRKeys, ConductRPlugin }
+import com.typesafe.conductr.sbt.ConductRKeys
 import com.typesafe.sbt.bundle.Import.BundleKeys
-import com.typesafe.sbt.bundle.SbtBundle
 import sbt._
 import sbt.Keys._
 
@@ -22,9 +21,9 @@ object Import {
       "The Docker image to use. By default `conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `conductr/conductr`."
     )
 
-    val ports = TaskKey[Set[Int]](
+    val ports = SettingKey[Set[Int]](
       "conductr-sandbox-ports",
-      "A sequence of ports to be made public by each of the ConductR containers. By default, this will be initialized to the `endpoints` setting's service ports declared for `sbt-bundle`."
+      "A sequence of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`."
     )
 
     val logLevel = SettingKey[String](
@@ -46,10 +45,36 @@ object ConductRSandbox extends AutoPlugin {
 
   val autoImport = Import
 
-  override def projectSettings = Seq(
-    envs := Map.empty,
-    image := "conductr/conductr-dev",
-    ports := Project.extract(state.value).getOpt(BundleKeys.endpoints).getOrElse(Map.empty)
+  override def globalSettings: Seq[Setting[_]] =
+    super.globalSettings ++ List(
+      envs := Map.empty,
+      image := "conductr/conductr-dev",
+      ports := Set.empty,
+      logLevel := "info",
+      nrOfContainers := 1,
+
+      ConductRKeys.conductrControlServerUrl in Global := url(s"http://${resolveDockerHostIp()}:$ConductrPort"),
+
+      onLoad := onLoad.value.andThen(runConductRs),
+      onUnload := (stopConductRs _).andThen(onUnload.value)
+    )
+
+  private final val ConductrNamePrefix = "cond-"
+
+  private final val ConductrPort = 9005
+
+  private def inspectCond0Ip(): String =
+    s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!
+
+  private def resolveDockerHostIp(): String =
+    Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse("hostname".!!.trim)
+
+  private def runConductRs(state: State): State = {
+    val extracted = Project.extract(state)
+    val settings = extracted.structure.data
+
+    // FIXME: I actually want to aggregate the endpoints setting across any module that declares it
+    val bundlePorts = extracted.getOpt(BundleKeys.endpoints).getOrElse(Map.empty)
       .flatMap {
         case (_, endpoint) =>
           endpoint.services.map { uri =>
@@ -57,15 +82,47 @@ object ConductRSandbox extends AutoPlugin {
           }.collect {
             case port if port >= 0 => port
           }
-      }.toSet,
-    logLevel := "info",
-    nrOfContainers := 1,
+      }.toSet
 
-    ConductRKeys.conductrControlServerUrl in Global := url(s"http://${resolveDockerHostIp()}:$ConductrPort")
-  )
+    for {
+      envsValue <- (envs in Global).get(settings)
+      imageValue <- (image in Global).get(settings)
+      logLevelValue <- (logLevel in Global).get(settings)
+      n <- (nrOfContainers in Global).get(settings)
+      portsValue <- (ports in Global).get(settings)
+    } {
+      state.log.info(s"Running ConductR...")
+      for (i <- 0 until n) {
+        val container = s"$ConductrNamePrefix$i"
+        val containers = s"""docker ps -q -f "name="$ConductrNamePrefix$i""".!!
+        if (containers.isEmpty) {
+          state.log.info(s"Running container $container ...")
+          val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
+          runConductR(container, cond0Ip, envsValue, imageValue, portsValue ++ bundlePorts, logLevelValue)
+        } else
+          state.log.warn(s"Container $container already exists, leaving it alone")
+      }
+    }
+    state
+  }
 
-  private final val ConductrPort = 9005
+  private def runConductR(
+    container: String,
+    cond0Ip: Option[String],
+    envsValue: Map[String, String],
+    imageValue: String,
+    portsValue: Set[Int],
+    logLevelValue: String): Unit = {
+    println(s"Container $container starting with $cond0Ip, $envsValue, $imageValue, $portsValue, $logLevelValue")
+  }
 
-  private def resolveDockerHostIp(): String =
-    Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse("hostname".!!.trim)
+  private def stopConductRs(state: State): State = {
+    val containers = s"""docker ps -q -f "name="$ConductrNamePrefix""".lines_!
+    if (containers.nonEmpty) {
+      state.log.info(s"Stopping ConductR...")
+      val containersArg = containers.mkString(" ")
+      s"docker rm -f $containersArg" ! state.log
+    }
+    state
+  }
 }

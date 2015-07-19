@@ -42,7 +42,7 @@ Name              | Description
 ------------------|-------------
 envs              | A `Map[String, String]` of environment variables to be set for each ConductR container.
 image             | The Docker image to use. By default `conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `conductr/conductr`.
-ports             | A `Set[Int]` ports to be made public by each of the ConductR containers. By default, this will be initialized to the `endpoints` setting's service ports declared for `sbt-bundle`.
+ports             | A `Seq[Int]` of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`.
 logLevel          | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
 nrOfContainers    | Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development).
 
