@@ -1,6 +1,5 @@
 package com.typesafe.sbt.conductrsandbox
 
-import com.typesafe.conductr.sbt.ConductRKeys
 import com.typesafe.sbt.bundle.Import.BundleKeys
 import sbt._
 import sbt.Keys._
@@ -35,9 +34,17 @@ object Import {
       "conductr-sandbox-nrOfContainers",
       """Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development)."""
     )
-  }
 
-  val sandbox = config("conductr-sandbox")
+    val runConductRs = TaskKey[Unit](
+      "conductr-sandbox-run",
+      "Starts the sandbox environment."
+    )
+
+    val stopConductRs = TaskKey[Unit](
+      "conductr-sandbox-stop",
+      "Stops the sandbox environment."
+    )
+  }
 }
 
 object ConductRSandbox extends AutoPlugin {
@@ -50,29 +57,41 @@ object ConductRSandbox extends AutoPlugin {
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
       envs := Map.empty,
-      image := "conductr/conductr-dev",
+      image := ConductRDevImage,
       ports := Set.empty,
       logLevel := "info",
       nrOfContainers := 1,
 
-      ConductRKeys.conductrControlServerUrl in Global := url(s"http://${resolveDockerHostIp()}:$ConductrPort"),
+      runConductRs := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
+      stopConductRs := stopConductRsTask().value,
 
-      run in sandbox := runConductRs(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
-      onUnload := (stopConductRs _).andThen(onUnload.value)
+      commands ++= Seq(sandboxControlServer)
     )
+
+  private final val ConductRDevImage = "conductr/conductr-dev"
 
   private final val ConductrNamePrefix = "cond-"
 
   private final val ConductrPort = 9005
 
   private def inspectCond0Ip(): String =
-    s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!
+    s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!.trim
+
+  private def portMapping(instance: Int, port: Int): String = {
+    val portStrRev = port.toString.reverse
+    (portStrRev.take(1) + instance.toString + portStrRev.drop(2)).reverse
+  }
 
   private def resolveDockerHostIp(): String =
     Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse("hostname".!!.trim)
 
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
-  private def runConductRs(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
+  private def runConductRsTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
+
+    if ((image in Global).value == ConductRDevImage && s"docker images -q $ConductRDevImage".!!.isEmpty) {
+      streams.value.log.info("Pulling down the development version of ConductR * * * SINGLE NODED AND NOT FOR PRODUCTION USAGE * * *")
+      s"docker pull $ConductRDevImage".!(streams.value.log)
+    }
 
     val bundlePorts = BundleKeys.endpoints.all(filter).value.reduce(_ ++ _)
       .flatMap {
@@ -85,41 +104,76 @@ object ConductRSandbox extends AutoPlugin {
       }.toSet
 
     streams.value.log.info("Running ConductR...")
+    val dockerHostIp = resolveDockerHostIp()
     for (i <- 0 until (nrOfContainers in Global).value) {
       val container = s"$ConductrNamePrefix$i"
-      val containers = s"""docker ps -q -f "name="$ConductrNamePrefix$i""".!!
+      val containers = s"docker ps -q -f name=$container".!!
       if (containers.isEmpty) {
-        streams.value.log.info(s"Running container $container ...")
+        val portsDesc = (ports in Global).value.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
+        streams.value.log.info(s"Running container $container exposing $portsDesc...")
         val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
-        runConductR(
+        runConductRCmd(
+          i,
           container,
           cond0Ip,
           (envs in Global).value,
           (image in Global).value,
           (logLevel in Global).value,
-          (ports in Global).value ++ bundlePorts)
+          (ports in Global).value ++ bundlePorts).!(streams.value.log)
       } else
         streams.value.log.warn(s"Container $container already exists, leaving it alone")
     }
   }
 
-  private def runConductR(
+  private def runConductRCmd(
+    instance: Int,
     container: String,
     cond0Ip: Option[String],
     envsValue: Map[String, String],
     imageValue: String,
     logLevelValue: String,
-    portsValue: Set[Int]): Unit = {
-    println(s"Container $container starting with $cond0Ip, $envsValue, $imageValue, $portsValue, $logLevelValue")
+    portsValue: Set[Int]): String = {
+
+    val command = Seq(
+      "docker",
+      "run"
+    )
+
+    val generalArgs = Seq(
+      "-d",
+      "--name", container
+    )
+
+    val logLevelEnv = Map("AKKA_LOGLEVEL" -> logLevelValue)
+    val syslogEnv = cond0Ip.map(ip => Map("SYSLOG_IP" -> ip)).getOrElse(Map.empty)
+    val envsArgs = (logLevelEnv ++ syslogEnv ++ envsValue).map { case (k, v) => s"-e $k=$v" }.toSeq
+
+    val conductrPorts = Set(
+      9004,
+      9005,
+      9006
+    )
+    val portsArgs = (portsValue ++ conductrPorts).toSeq.flatMap(port => Seq("-p", s"${portMapping(instance, port)}:$port"))
+
+    val seedNodeArg = cond0Ip.toSeq.flatMap(ip => Seq("--seed", s"$ip:9004"))
+    val positionalArgs = Seq(
+      imageValue,
+      "--discover-host-ip"
+    ) ++ seedNodeArg
+
+    (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs).mkString(" ")
   }
 
-  private def stopConductRs(state: State): State = {
-    val containers = s"""docker ps -q -f "name="$ConductrNamePrefix""".lines_!
+  private def sandboxControlServer: Command = Command.command("sandboxControlServer") { prevState =>
+    Command.process(s"controlServer http://${resolveDockerHostIp()}:$ConductrPort", prevState)
+  }
+
+  private def stopConductRsTask(): Def.Initialize[Task[Unit]] = Def.task {
+    val containers = s"docker ps -q -f name=$ConductrNamePrefix".lines_!
     if (containers.nonEmpty) {
-      state.log.info(s"Stopping ConductR...")
+      streams.value.log.info(s"Stopping ConductR...")
       val containersArg = containers.mkString(" ")
-      s"docker rm -f $containersArg" ! state.log
+      s"docker rm -f $containersArg".!(streams.value.log)
     }
-    state
   }
 }

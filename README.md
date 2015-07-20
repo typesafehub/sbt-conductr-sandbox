@@ -19,20 +19,36 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-conductr-sandbox" % "0.1.0")
 Then enable the `ConductRSandbox` plugin for your module. For example:
 
 ```scala
-lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, ConductRSandbox)
+lazy val root = (project in file(".")).enablePlugins(ConductRSandbox)
 ```
 
-Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the `conductr/conductr-dev` image from the public Docker registry).
+To run the sandbox environment use the following task:
 
-`sbt-conductr-sandbox` has a requirement for the `sbt-conductr` plugin to be enabled for your project. Given the `JavaAppPackaging`, `sbt-conductr` will become enabled. `sbt-conductr-sandbox` will automatically override the `sbt-conductr` `conductrControlServerUrl` setting so that `conduct info` and other `conduct` commands will communicate with the Docker cluster managed by the sandbox.
+```scala
+conductr-sandbox-run
+```
 
 > Note that the ConductR cluster will take a few seconds to become available and so any initial command that you send to it may not work immediately.
 
-The sandbox cluster will automatically stop when your sbt module becomes out of scope e.g. when your sbt session terminates.
+Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the `conductr/conductr-dev` image from the public Docker registry).
 
-# Docker Container Naming
+To stop the cluster use the `conductr-sandbox-stop` task.
+
+If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands will communicate with the Docker cluster managed by the sandbox. To set this up type the following within the sbt console:
+
+```scala
+sandboxControlServer
+```
+
+## Docker Container Naming
 
 Each node of the Docker cluster managed by the sandbox is given a name of the form `cond-n` where `n` is the node number starting at zero. Thus `cond-0` is the first node (and the only node given default settings).
+
+## Port Mapping Convention
+
+If your application or service exposes a port via `sbt-bundle`'s `endpoints` declaration, then these ports will be automatically exposed. For example, if your web application serves traffic on port 9000 then it will become available on the IP addresses of the Docker containers that host each ConductR process. The first container will expose port 9000, the second will be 9010 and the third will be 9020. The sandbox cluster is configured with a proxy and will automatically route requests to the correct instances that you have running in the cluster. Therefore any one of the 9000, 9010 or 9020 will reach your application.
+
+As a convenience, `sbt-conductr-sandbox` reports each of the above mappings along with IP addresses when you use the `runConductRs` task.
 
 ## Settings
 
@@ -45,5 +61,15 @@ image             | The Docker image to use. By default `conductr/conductr-dev` 
 ports             | A `Seq[Int]` of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`.
 logLevel          | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
 nrOfContainers    | Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development).
+runConductRs      | Starts the sandbox environment.
+stopConductRs     | Stops the sandbox environment.
+
+## Commands
+
+The following command is provided:
+
+Name                 | Description
+---------------------|-------------
+sandboxControlServer | Invokes the `controlServer` command of sbt-conductr with the url of the sandbox. This then enables the regular "conduct info" and other commands to be used with the sandbox. Requires the `sbt-conductr` plugin.
 
 &copy; Typesafe Inc., 2015

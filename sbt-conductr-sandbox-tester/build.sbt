@@ -1,6 +1,6 @@
 import ByteConversions._
 
-lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, ConductRSandbox)
+lazy val root = (project in file(".")).enablePlugins(ConductRPlugin, ConductRSandbox)
 
 name := "simple-test"
 
@@ -12,3 +12,7 @@ BundleKeys.diskSpace := 10.MB
 BundleKeys.roles := Set("web-server")
 
 BundleKeys.configurationName := "frontend"
+
+SandboxKeys.image in Global := "conductr/conductr"
+SandboxKeys.nrOfContainers in Global := 3
+SandboxKeys.ports in Global := Set(9999)

@@ -1,3 +1,7 @@
-> bundle:dist
+> conductr-sandbox-run
 
-> checkBundleConf
+> checkConductRIsRunning
+
+> conductr-sandbox-stop
+
+> checkConductRIsStopped
