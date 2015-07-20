@@ -22,7 +22,7 @@ ScalariformKeys.preferences := ScalariformKeys.preferences.value
   .setPreference(DoubleIndentClassDeclaration, true)
   .setPreference(PreserveDanglingCloseParenthesis, true)
 
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.0.0")
+addSbtPlugin("com.typesafe.sbt" % "sbt-bundle" % "1.0.0")
 
 releaseSettings
 ReleaseKeys.versionBump := sbtrelease.Version.Bump.Minor
