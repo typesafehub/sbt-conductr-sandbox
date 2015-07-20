@@ -36,6 +36,8 @@ object Import {
       """Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development)."""
     )
   }
+
+  val sandbox = config("conductr-sandbox")
 }
 
 object ConductRSandbox extends AutoPlugin {
@@ -55,7 +57,7 @@ object ConductRSandbox extends AutoPlugin {
 
       ConductRKeys.conductrControlServerUrl in Global := url(s"http://${resolveDockerHostIp()}:$ConductrPort"),
 
-      onLoad := onLoad.value.andThen(runConductRs),
+      run in sandbox := runConductRs(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
       onUnload := (stopConductRs _).andThen(onUnload.value)
     )
 
@@ -69,12 +71,10 @@ object ConductRSandbox extends AutoPlugin {
   private def resolveDockerHostIp(): String =
     Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse("hostname".!!.trim)
 
-  private def runConductRs(state: State): State = {
-    val extracted = Project.extract(state)
-    val settings = extracted.structure.data
+  // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
+  private def runConductRs(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
 
-    // FIXME: I actually want to aggregate the endpoints setting across any module that declares it
-    val bundlePorts = extracted.getOpt(BundleKeys.endpoints).getOrElse(Map.empty)
+    val bundlePorts = BundleKeys.endpoints.all(filter).value.reduce(_ ++ _)
       .flatMap {
         case (_, endpoint) =>
           endpoint.services.map { uri =>
@@ -84,26 +84,23 @@ object ConductRSandbox extends AutoPlugin {
           }
       }.toSet
 
-    for {
-      envsValue <- (envs in Global).get(settings)
-      imageValue <- (image in Global).get(settings)
-      logLevelValue <- (logLevel in Global).get(settings)
-      n <- (nrOfContainers in Global).get(settings)
-      portsValue <- (ports in Global).get(settings)
-    } {
-      state.log.info(s"Running ConductR...")
-      for (i <- 0 until n) {
-        val container = s"$ConductrNamePrefix$i"
-        val containers = s"""docker ps -q -f "name="$ConductrNamePrefix$i""".!!
-        if (containers.isEmpty) {
-          state.log.info(s"Running container $container ...")
-          val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
-          runConductR(container, cond0Ip, envsValue, imageValue, portsValue ++ bundlePorts, logLevelValue)
-        } else
-          state.log.warn(s"Container $container already exists, leaving it alone")
-      }
+    streams.value.log.info("Running ConductR...")
+    for (i <- 0 until (nrOfContainers in Global).value) {
+      val container = s"$ConductrNamePrefix$i"
+      val containers = s"""docker ps -q -f "name="$ConductrNamePrefix$i""".!!
+      if (containers.isEmpty) {
+        streams.value.log.info(s"Running container $container ...")
+        val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
+        runConductR(
+          container,
+          cond0Ip,
+          (envs in Global).value,
+          (image in Global).value,
+          (logLevel in Global).value,
+          (ports in Global).value ++ bundlePorts)
+      } else
+        streams.value.log.warn(s"Container $container already exists, leaving it alone")
     }
-    state
   }
 
   private def runConductR(
@@ -111,8 +108,8 @@ object ConductRSandbox extends AutoPlugin {
     cond0Ip: Option[String],
     envsValue: Map[String, String],
     imageValue: String,
-    portsValue: Set[Int],
-    logLevelValue: String): Unit = {
+    logLevelValue: String,
+    portsValue: Set[Int]): Unit = {
     println(s"Container $container starting with $cond0Ip, $envsValue, $imageValue, $portsValue, $logLevelValue")
   }
 
