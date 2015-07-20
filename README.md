@@ -10,7 +10,7 @@ sbt-conductr-sandbox aims to support the running of a Docker-based ConductR clus
 
 If you have not done so already, then please [install Docker](https://www.docker.com/).
 
-Declare the plugin in addition to [`sbt-conductr`](https://github.com/sbt/sbt-conductr#sbt-conductr) (typically in a `plugins.sbt`):
+Declare the plugin (typically in a `plugins.sbt`):
 
 ```scala
 addSbtPlugin("com.typesafe.sbt" % "sbt-conductr-sandbox" % "0.1.0")
@@ -34,7 +34,7 @@ Given the above you will then have a ConductR process running in the background 
 
 To stop the cluster use the `conductr-sandbox-stop` task.
 
-If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands will communicate with the Docker cluster managed by the sandbox. To set this up type the following within the sbt console:
+If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands can communicate with the Docker cluster managed by the sandbox. To set this up type the following command within the sbt console:
 
 ```scala
 sandboxControlServer
@@ -46,7 +46,7 @@ Each node of the Docker cluster managed by the sandbox is given a name of the fo
 
 ## Port Mapping Convention
 
-If your application or service exposes a port via `sbt-bundle`'s `endpoints` declaration, then these ports will be automatically exposed. For example, if your web application serves traffic on port 9000 then it will become available on the IP addresses of the Docker containers that host each ConductR process. The first container will expose port 9000, the second will be 9010 and the third will be 9020. The sandbox cluster is configured with a proxy and will automatically route requests to the correct instances that you have running in the cluster. Therefore any one of the 9000, 9010 or 9020 will reach your application.
+If your application or service exposes a port via `sbt-bundle`'s `endpoints` declaration then these ports will be automatically exposed. For example, if your web application serves traffic on port 9000 then it will become available on the IP addresses of the Docker containers that host each ConductR process. By convention, the first container will expose port 9000, the second will be 9010 and the third will be 9020. The sandbox cluster is configured with a proxy and will automatically route requests to the correct instances that you have running in the cluster. Therefore any one of the addresses with the 9000, 9010 or 9020 ports will reach your application.
 
 As a convenience, `sbt-conductr-sandbox` reports each of the above mappings along with IP addresses when you use the `runConductRs` task.
 
