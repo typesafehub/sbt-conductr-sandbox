@@ -93,7 +93,7 @@ object ConductRSandbox extends AutoPlugin {
       s"docker pull $ConductRDevImage".!(streams.value.log)
     }
 
-    val bundlePorts = BundleKeys.endpoints.all(filter).value.reduce(_ ++ _)
+    val bundlePorts = BundleKeys.endpoints.?.map(_.getOrElse(Map.empty)).all(filter).value.reduce(_ ++ _)
       .flatMap {
         case (_, endpoint) =>
           endpoint.services.map { uri =>
