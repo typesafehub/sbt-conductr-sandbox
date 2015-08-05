@@ -25,14 +25,14 @@ lazy val root = (project in file(".")).enablePlugins(ConductRSandbox)
 To run the sandbox environment use the following task:
 
 ```scala
-conductr-sandbox-run
+conductrSandboxRun
 ```
 
 > Note that the ConductR cluster will take a few seconds to become available and so any initial command that you send to it may not work immediately.
 
 Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the `conductr/conductr-dev` image from the public Docker registry).
 
-To stop the cluster use the `conductr-sandbox-stop` task.
+To stop the cluster use the `conductrSandboxStop` task.
 
 If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands can communicate with the Docker cluster managed by the sandbox. To set this up type the following command within the sbt console:
 

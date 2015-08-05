@@ -54,18 +54,17 @@ object ConductRSandbox extends AutoPlugin {
 
   val autoImport = Import
 
-  override def globalSettings: Seq[Setting[_]] =
-    super.globalSettings ++ List(
+  override def projectSettings: Seq[Setting[_]] =
+    List(
+      commands ++= Seq(sandboxControlServer),
+      runConductRs := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
+      stopConductRs := stopConductRsTask().value,
+
       envs := Map.empty,
       image := ConductRDevImage,
       ports := Set.empty,
       logLevel := "info",
-      nrOfContainers := 1,
-
-      runConductRs := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
-      stopConductRs := stopConductRsTask().value,
-
-      commands ++= Seq(sandboxControlServer)
+      nrOfContainers := 1
     )
 
   private final val ConductRDevImage = "conductr/conductr-dev"
@@ -88,7 +87,7 @@ object ConductRSandbox extends AutoPlugin {
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
   private def runConductRsTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
 
-    if ((image in Global).value == ConductRDevImage && s"docker images -q $ConductRDevImage".!!.isEmpty) {
+    if (image.value == ConductRDevImage && s"docker images -q $ConductRDevImage".!!.isEmpty) {
       streams.value.log.info("Pulling down the development version of ConductR * * * SINGLE NODED AND NOT FOR PRODUCTION USAGE * * *")
       s"docker pull $ConductRDevImage".!(streams.value.log)
     }
@@ -105,21 +104,22 @@ object ConductRSandbox extends AutoPlugin {
 
     streams.value.log.info("Running ConductR...")
     val dockerHostIp = resolveDockerHostIp()
-    for (i <- 0 until (nrOfContainers in Global).value) {
+    for (i <- 0 until nrOfContainers.value) {
       val container = s"$ConductrNamePrefix$i"
       val containers = s"docker ps -q -f name=$container".!!
       if (containers.isEmpty) {
-        val portsDesc = (ports in Global).value.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
+        val portsDesc = ports.value.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
         streams.value.log.info(s"Running container $container exposing $portsDesc...")
         val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
         runConductRCmd(
           i,
           container,
           cond0Ip,
-          (envs in Global).value,
-          (image in Global).value,
-          (logLevel in Global).value,
-          (ports in Global).value ++ bundlePorts).!(streams.value.log)
+          envs.value,
+          image.value,
+          logLevel.value,
+          ports.value ++ bundlePorts
+        ).!(streams.value.log)
       } else
         streams.value.log.warn(s"Container $container already exists, leaving it alone")
     }
@@ -161,6 +161,7 @@ object ConductRSandbox extends AutoPlugin {
       "--discover-host-ip"
     ) ++ seedNodeArg
 
+    println("********** command: " + (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs).mkString(" "))
     (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs).mkString(" ")
   }
 
