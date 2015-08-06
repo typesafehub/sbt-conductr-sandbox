@@ -1,0 +1,19 @@
+> sandbox run
+
+> checkPortsWithRun
+
+> bundle:dist
+
+> checkRunStartCommand
+
+> clean
+
+> sandbox debug
+
+> checkPortsWithDebug
+
+> bundle:dist
+
+> checkDebugStartCommand
+
+> sandbox stop

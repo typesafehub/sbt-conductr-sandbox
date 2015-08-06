@@ -22,23 +22,23 @@ Then enable the `ConductRSandbox` plugin for your module. For example:
 lazy val root = (project in file(".")).enablePlugins(ConductRSandbox)
 ```
 
-To run the sandbox environment use the following task:
+To run the sandbox environment use the following command:
 
 ```scala
-conductr-sandbox-run
+sandbox run
 ```
 
 > Note that the ConductR cluster will take a few seconds to become available and so any initial command that you send to it may not work immediately.
 
 Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the `conductr/conductr-dev` image from the public Docker registry).
 
-To stop the cluster use the `conductr-sandbox-stop` task.
-
-If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands can communicate with the Docker cluster managed by the sandbox. To set this up type the following command within the sbt console:
+To stop the cluster use: 
 
 ```scala
-sandboxControlServer
+sandbox stop
 ```
+
+If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands will automatically communicate with the Docker cluster managed by the sandbox.
 
 ## Docker Container Naming
 
@@ -46,30 +46,72 @@ Each node of the Docker cluster managed by the sandbox is given a name of the fo
 
 ## Port Mapping Convention
 
-If your application or service exposes a port via `sbt-bundle`'s `endpoints` declaration then these ports will be automatically exposed. For example, if your web application serves traffic on port 9000 then it will become available on the IP addresses of the Docker containers that host each ConductR process. By convention, the first container will expose port 9000, the second will be 9010 and the third will be 9020. The sandbox cluster is configured with a proxy and will automatically route requests to the correct instances that you have running in the cluster. Therefore any one of the addresses with the 9000, 9010 or 9020 ports will reach your application.
+The following ports are exposed to the ConductR and Docker containers:
+- `BundleKeys.endpoints` of `sbt-bundle`
+- `SandboxKeys.ports`
+- `SandboxKeys.debugPort` if sandbox is started in debug mode
 
-As a convenience, `sbt-conductr-sandbox` reports each of the above mappings along with IP addresses when you use the `runConductRs` task.
+### Example
+Your application defines these settings in the `build.sbt`:
+
+```
+lazy val root = (project in file(".")).enablePlugins(ConductRPlugin, ConductRSandbox)
+
+BundleKeys.endpoints := Map("sample-app" -> Endpoint("http", services = Set(uri("http://:9000"))))
+SandboxKeys.image in Global := "conductr/conductr"
+SandboxKeys.nrOfContainers in Global := 3
+SandboxKeys.ports in Global := Set(1111)
+SandboxKeys.debugPort := 5095
+```
+
+In this case we want to create a ConductR sandbox cluster with 3 nodes. 
+
+> Note that a cluster with more than one node is only possible with the full version of ConductR. If `SandboxKeys.image` is not overridden the single node version will be used. 
+
+We also specify that the web application should serve traffic on port 9000. Additionally we expose port 1111. The debug port gets only mapped if we start the ConductR sandbox cluster in debug mode with `sandbox debug`.
+
+These settings result in the following port mapping:
+
+Docker container | ConductR port | Docker internal port | Docker public port
+-----------------|---------------|----------------------|-------------------
+cond-0           | 9000          | 9000                 | 9000
+cond-1           | 9000          | 9000                 | 9010
+cond-2           | 9000          | 9000                 | 9020
+cond-0           | 1111          | 1111                 | 1101
+cond-1           | 1111          | 1111                 | 1111
+cond-2           | 1111          | 1111                 | 1121
+cond-0           | 5095          | 5095                 | 5005
+cond-1           | 5095          | 5095                 | 5015
+cond-2           | 5095          | 5095                 | 5025
+
+Each specified port is mapped to a unique public Docker port in order to allow multiple nodes within the sandbox cluster. By convention, the port is mapped for the first Docker container to XX0X, the second will be XX1X, the third will be XX2X. 
+The web application becomes available on the IP addresses of the Docker containers that host each ConductR process. The sandbox cluster is configured with a proxy and will automatically route requests to the correct instances that you have running in the cluster. Therefore any one of the addresses with the 9000, 9010 or 9020 ports will reach your application.
+
+As a convenience, `sandbox run` and `sandbox debug` reports each of the above mappings along with IP addresses.
 
 ## Settings
 
 The following settings are provided under the `SandboxKeys` object:
 
-Name              | Description
-------------------|-------------
-envs              | A `Map[String, String]` of environment variables to be set for each ConductR container.
-image             | The Docker image to use. By default `conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `conductr/conductr`.
-ports             | A `Seq[Int]` of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`.
-logLevel          | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
-nrOfContainers    | Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development).
-runConductRs      | Starts the sandbox environment.
-stopConductRs     | Stops the sandbox environment.
+Name              | Scope   | Description
+------------------|---------|------------
+envs              | Global  | A `Map[String, String]` of environment variables to be set for each ConductR container.
+image             | Global  | The Docker image to use. By default `conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `conductr/conductr`.
+ports             | Global  | A `Seq[Int]` of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`.
+debugPort         | Project | Debug port to be made public to the ConductR containers if the sandbox gets started in [debug mode](#Commands). The debug ports of each sbt project setting will be used. If `sbt-bundle` is enabled the JVM argument `-jvm-debug $debugPort` is  additionally added to the `startCommand` of `sbt-bundle`. Default is 5005.
+logLevel          | Global  | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
+nrOfContainers    | Global  | Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development).
+runConductRs      | Global  | Starts the sandbox environment.
+stopConductRs     | Global  | Stops the sandbox environment.
 
 ## Commands
 
-The following command is provided:
+The following commands are provided:
 
-Name                 | Description
----------------------|-------------
-sandboxControlServer | Invokes the `controlServer` command of sbt-conductr with the url of the sandbox. This then enables the regular "conduct info" and other commands to be used with the sandbox. Requires the `sbt-conductr` plugin.
+Name          | Description
+--------------|-------------
+sandbox run   | Starts the ConductR sandbox cluster without remote debugging facilities.
+sandbox debug | Starts the ConductR sandbox cluster and exposes the `debugPort` to docker and ConductR to enable remote debugging.
+sandbox stop  | Stops the ConductR sandbox cluster.
 
 &copy; Typesafe Inc., 2015

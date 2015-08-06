@@ -1,9 +1,11 @@
 package com.typesafe.sbt.conductrsandbox
 
 import com.typesafe.sbt.bundle.Import.BundleKeys
+import com.typesafe.conductr.sbt.ConductRKeys
 import sbt._
 import sbt.Keys._
-
+import complete.DefaultParsers._
+import sbt.complete.Parser
 import scala.util.Try
 
 object Import {
@@ -25,6 +27,11 @@ object Import {
       "A sequence of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`."
     )
 
+    val debugPort = SettingKey[Int](
+      "conductr-sandbox-debugPort",
+      "The debug port to be made public by each of the ConductR containers."
+    )
+
     val logLevel = SettingKey[String](
       "conductr-sandbox-logLevel",
       """The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container."""
@@ -37,12 +44,12 @@ object Import {
 
     val runConductRs = TaskKey[Unit](
       "conductr-sandbox-run",
-      "Starts the sandbox environment."
+      "Starts the sandbox environment"
     )
 
     val stopConductRs = TaskKey[Unit](
       "conductr-sandbox-stop",
-      "Stops the sandbox environment."
+      "Stops the sandbox environment"
     )
   }
 }
@@ -55,17 +62,20 @@ object ConductRSandbox extends AutoPlugin {
   val autoImport = Import
 
   override def globalSettings: Seq[Setting[_]] =
-    super.globalSettings ++ List(
+    super.globalSettings ++ Seq(
       envs := Map.empty,
       image := ConductRDevImage,
       ports := Set.empty,
       logLevel := "info",
       nrOfContainers := 1,
-
       runConductRs := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
-      stopConductRs := stopConductRsTask().value,
+      stopConductRs := stopConductRsTask.value,
+      commands := Seq(conductrSandbox)
+    )
 
-      commands ++= Seq(sandboxControlServer)
+  override def projectSettings: Seq[Def.Setting[_]] =
+    super.projectSettings ++ Seq(
+      debugPort := 5005
     )
 
   private final val ConductRDevImage = "typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev"
@@ -73,6 +83,10 @@ object ConductRSandbox extends AutoPlugin {
   private final val ConductrNamePrefix = "cond-"
 
   private final val ConductrPort = 9005
+
+  private final val ConductrSandboxControlServerUrl = new sbt.URL(s"http://${resolveDockerHostIp()}:$ConductrPort")
+
+  private final val WithDebugAttrKey = AttributeKey[Unit]("conductr-sandbox-with-debug")
 
   private def inspectCond0Ip(): String =
     s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!.trim
@@ -103,13 +117,16 @@ object ConductRSandbox extends AutoPlugin {
           }
       }.toSet
 
+    val debugPorts = state.value.get(WithDebugAttrKey).fold(Set.empty[Int])(_ => debugPort.?.all(filter).value.flatten.toSet)
+
     streams.value.log.info("Running ConductR...")
     val dockerHostIp = resolveDockerHostIp()
     for (i <- 0 until (nrOfContainers in Global).value) {
       val container = s"$ConductrNamePrefix$i"
       val containers = s"docker ps -q -f name=$container".!!
       if (containers.isEmpty) {
-        val portsDesc = (ports in Global).value.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
+        val allPorts = bundlePorts ++ debugPorts ++ (ports in Global).value
+        val portsDesc = allPorts.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
         streams.value.log.info(s"Running container $container exposing $portsDesc...")
         val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
         runConductRCmd(
@@ -119,7 +136,8 @@ object ConductRSandbox extends AutoPlugin {
           (envs in Global).value,
           (image in Global).value,
           (logLevel in Global).value,
-          (ports in Global).value ++ bundlePorts).!(streams.value.log)
+          allPorts
+        ).!(streams.value.log)
       } else
         streams.value.log.warn(s"Container $container already exists, leaving it alone")
     }
@@ -164,10 +182,6 @@ object ConductRSandbox extends AutoPlugin {
     (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs).mkString(" ")
   }
 
-  private def sandboxControlServer: Command = Command.command("sandboxControlServer") { prevState =>
-    Command.process(s"controlServer http://${resolveDockerHostIp()}:$ConductrPort", prevState)
-  }
-
   private def stopConductRsTask(): Def.Initialize[Task[Unit]] = Def.task {
     val containers = s"docker ps -q -f name=$ConductrNamePrefix".lines_!
     if (containers.nonEmpty) {
@@ -176,4 +190,77 @@ object ConductRSandbox extends AutoPlugin {
       s"docker rm -f $containersArg".!(streams.value.log)
     }
   }
+
+  private def conductrSandbox: Command = Command("sandbox", ConductrSandboxHelp)(_ => Parsers.conductrSandboxParser) {
+    case (prevState, RunSubtask) =>
+      implicit val extracted = Project.extract(prevState)
+      prevState.get(WithDebugAttrKey) match {
+        case Some(_) =>
+          extracted.runTask(stopConductRs, prevState)
+          val withoutDebugState = disableDebugMode(prevState)
+          runSandboxAndSetSettings(withoutDebugState, controlServerSetting)
+
+        case None =>
+          runSandboxAndSetSettings(prevState, controlServerSetting)
+      }
+
+    case (prevState, DebugSubtask) =>
+      implicit val extracted = Project.extract(prevState)
+      prevState.get(WithDebugAttrKey) match {
+        case Some(_) =>
+          runSandboxAndSetSettings(prevState, controlServerSetting ++ debugSetting)
+
+        case None =>
+          extracted.runTask(stopConductRs, prevState)
+          val debugState = enableDebugMode(prevState)
+          runSandboxAndSetSettings(debugState, controlServerSetting ++ debugSetting)
+      }
+
+    case (prevState, StopSubtask) =>
+      // Stop sandbox cluster
+      Project.runTask(stopConductRs, prevState)
+      prevState
+  }
+
+  private def runSandboxAndSetSettings(state: State, settings: Seq[Def.Setting[_]])(implicit extracted: Extracted): State = {
+    extracted.runTask(runConductRs, state)
+    extracted.append(settings, state)
+  }
+
+  private def enableDebugMode(state: State): State =
+    state.put(WithDebugAttrKey, ())
+
+  private def disableDebugMode(state: State): State =
+    state.remove(WithDebugAttrKey)
+
+  private def debugSetting(implicit extracted: Extracted): Seq[Def.Setting[_]] = {
+    extracted
+      .getOpt(BundleKeys.startCommand)
+      .map(_ => BundleKeys.startCommand += s"-jvm-debug ${SandboxKeys.debugPort.value}")
+      .toSeq
+  }
+
+  private def controlServerSetting(implicit extracted: Extracted): Seq[Def.Setting[_]] =
+    extracted
+      .getOpt(ConductRKeys.conductrControlServerUrl in Global)
+      .map(_ => ConductRKeys.conductrControlServerUrl in Global := ConductrSandboxControlServerUrl)
+      .toSeq
+
+  private final val ConductrSandboxHelp = Help.briefOnly(Seq(
+    "run" -> "Run the ConductR Cluster in sandbox mode",
+    "debug" -> "Run the ConductR Cluster in sandbox mode with remote debugging enabled.",
+    "stop" -> "Stop the ConductR cluster."
+  ))
+
+  private object Parsers {
+    lazy val conductrSandboxParser = (Space ~> (runSubtask | debugSubtask | stopSubtask))
+    def runSubtask: Parser[RunSubtask.type] = token("run") map { case _ => RunSubtask }
+    def debugSubtask: Parser[DebugSubtask.type] = token("debug") map { case _ => DebugSubtask }
+    def stopSubtask: Parser[StopSubtask.type] = token("stop") map { case _ => StopSubtask }
+  }
+
+  private sealed trait ConductrSandboxSubtask
+  private case object RunSubtask extends ConductrSandboxSubtask
+  private case object DebugSubtask extends ConductrSandboxSubtask
+  private case object StopSubtask extends ConductrSandboxSubtask
 }
