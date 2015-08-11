@@ -1,6 +1,6 @@
 # ConductR Sandbox
 
-[![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr-sandbox.png?branch=master)](https://travis-ci.org/sbt/sbt-conductr-sandbox)
+[![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr-sandbox.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr-sandbox)
 
 ## Introduction
 
