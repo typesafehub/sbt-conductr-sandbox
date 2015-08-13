@@ -68,7 +68,7 @@ object ConductRSandbox extends AutoPlugin {
       commands ++= Seq(sandboxControlServer)
     )
 
-  private final val ConductRDevImage = "conductr/conductr-dev"
+  private final val ConductRDevImage = "typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev"
 
   private final val ConductrNamePrefix = "cond-"
 
