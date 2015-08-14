@@ -1,7 +1,7 @@
-> conductr-sandbox-run
+> sandbox run
 
 > checkConductRIsRunning
 
-> conductr-sandbox-stop
+> sandbox stop
 
 > checkConductRIsStopped
