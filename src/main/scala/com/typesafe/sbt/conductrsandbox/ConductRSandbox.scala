@@ -169,7 +169,8 @@ object ConductRSandbox extends AutoPlugin {
     val conductrPorts = Set(
       9004,
       9005,
-      9006
+      9006,
+      9200
     )
     val portsArgs = (portsValue ++ conductrPorts).toSeq.flatMap(port => Seq("-p", s"${portMapping(instance, port)}:$port"))
 
