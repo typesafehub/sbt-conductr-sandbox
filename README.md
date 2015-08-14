@@ -96,7 +96,7 @@ The following settings are provided under the `SandboxKeys` object:
 Name              | Scope   | Description
 ------------------|---------|------------
 envs              | Global  | A `Map[String, String]` of environment variables to be set for each ConductR container.
-image             | Global  | The Docker image to use. By default `conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `conductr/conductr`.
+image             | Global  | The Docker image to use. By default `typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `typesafe-docker-internal-docker.bintray.io/conductr/conductr`.
 ports             | Global  | A `Seq[Int]` of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`.
 debugPort         | Project | Debug port to be made public to the ConductR containers if the sandbox gets started in [debug mode](#Commands). The debug ports of each sbt project setting will be used. If `sbt-bundle` is enabled the JVM argument `-jvm-debug $debugPort` is  additionally added to the `startCommand` of `sbt-bundle`. Default is 5005.
 logLevel          | Global  | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
