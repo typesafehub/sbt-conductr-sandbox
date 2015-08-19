@@ -13,7 +13,7 @@ If you have not done so already, then please [install Docker](https://www.docker
 Declare the plugin (typically in a `plugins.sbt`):
 
 ```scala
-addSbtPlugin("com.typesafe.sbt" % "sbt-conductr-sandbox" % "1.0.1")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.0.1")
 ```
 
 Then enable the `ConductRSandbox` plugin for your module. For example:
