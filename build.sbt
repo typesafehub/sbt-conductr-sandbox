@@ -3,7 +3,7 @@ import bintray.Keys._
 
 sbtPlugin := true
 
-organization := "com.typesafe.sbt"
+organization := "com.typesafe.conductr"
 name := "sbt-conductr-sandbox"
 
 scalaVersion := "2.10.4"

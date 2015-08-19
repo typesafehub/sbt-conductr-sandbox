@@ -1,4 +1,4 @@
-package com.typesafe.sbt.conductrsandbox
+package com.typesafe.conductr.sandbox.sbt
 
 import com.typesafe.sbt.bundle.Import.BundleKeys
 import com.typesafe.conductr.sbt.ConductRKeys
