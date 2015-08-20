@@ -8,6 +8,7 @@ version := "0.1.0-SNAPSHOT"
 SandboxKeys.ports in Global := Set(1111, 2222)
 SandboxKeys.image in Global := "conductr/conductr"
 SandboxKeys.nrOfContainers in Global := 2
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "0.1.0")
 
 lazy val common = (project in file("modules/common"))
   .enablePlugins(ConductRSandbox)
