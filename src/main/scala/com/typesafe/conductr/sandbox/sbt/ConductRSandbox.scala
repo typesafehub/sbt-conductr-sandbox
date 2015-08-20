@@ -5,7 +5,7 @@ import com.typesafe.conductr.sbt.ConductRKeys
 import sbt._
 import sbt.Keys._
 import complete.DefaultParsers._
-import sbt.complete.Parser
+import sbt.complete.{ FixedSetExamples, Parser }
 import scala.util.Try
 
 object Import {
@@ -88,6 +88,8 @@ object ConductRSandbox extends AutoPlugin {
 
   private final val WithDebugAttrKey = AttributeKey[Unit]("conductr-sandbox-with-debug")
 
+  private final val WithFeaturesAttrKey = AttributeKey[Set[Feature]]("conductr-sandbox-with-features")
+
   private def inspectCond0Ip(): String =
     s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!.trim
 
@@ -107,6 +109,10 @@ object ConductRSandbox extends AutoPlugin {
       s"docker pull $ConductRDevImage".!(streams.value.log)
     }
 
+    val features = state.value.get(WithFeaturesAttrKey).toSet.flatten
+
+    val featurePorts = features.map(_.port)
+
     val bundlePorts = BundleKeys.endpoints.?.map(_.getOrElse(Map.empty)).all(filter).value.reduce(_ ++ _)
       .flatMap {
         case (_, endpoint) =>
@@ -125,8 +131,10 @@ object ConductRSandbox extends AutoPlugin {
       val container = s"$ConductrNamePrefix$i"
       val containers = s"docker ps -q -f name=$container".!!
       if (containers.isEmpty) {
-        val allPorts = bundlePorts ++ debugPorts ++ (ports in Global).value
+        val allPorts = bundlePorts ++ featurePorts ++ debugPorts ++ (ports in Global).value
         val portsDesc = allPorts.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
+        // Display the ports on the command line. Only if the user specifies a certain feature, then
+        // the corresponding port will be displayed when running 'sandbox run' or 'sandbox debug'
         streams.value.log.info(s"Running container $container exposing $portsDesc...")
         val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
         runConductRCmd(
@@ -136,7 +144,8 @@ object ConductRSandbox extends AutoPlugin {
           (envs in Global).value,
           (image in Global).value,
           (logLevel in Global).value,
-          allPorts
+          allPorts,
+          features.map(_.name)
         ).!(streams.value.log)
       } else
         streams.value.log.warn(s"Container $container already exists, leaving it alone")
@@ -150,7 +159,8 @@ object ConductRSandbox extends AutoPlugin {
     envsValue: Map[String, String],
     imageValue: String,
     logLevelValue: String,
-    portsValue: Set[Int]): String = {
+    portsValue: Set[Int],
+    featureNames: Set[String]): String = {
 
     val command = Seq(
       "docker",
@@ -164,13 +174,21 @@ object ConductRSandbox extends AutoPlugin {
 
     val logLevelEnv = Map("AKKA_LOGLEVEL" -> logLevelValue)
     val syslogEnv = cond0Ip.map(ip => Map("SYSLOG_IP" -> ip)).getOrElse(Map.empty)
-    val envsArgs = (logLevelEnv ++ syslogEnv ++ envsValue).map { case (k, v) => s"-e $k=$v" }.toSeq
+    val conductrFeaturesArgs =
+      if (featureNames.isEmpty)
+        Map.empty
+      else
+        Map("CONDUCTR_FEATURES" -> featureNames.mkString(","))
+    val envsArgs = (logLevelEnv ++ syslogEnv ++ envsValue ++ conductrFeaturesArgs).map { case (k, v) => s"-e $k=$v" }.toSeq
 
+    // Expose always the feature related ports even if the are not specified with `--withFeatures`.
+    // Therefor these ports are also exposed if only the `runConductRs` tasks is executed (e.g. in testing)
     val conductrPorts = Set(
-      9004,
-      9005,
-      9006,
-      9200
+      9004, // ConductR internal akka remoting
+      9005, // ConductR controlServer
+      9006, // ConductR bundleStreamServer
+      9200, // conductr-elasticsearch bundle
+      9999 // visualizer bundle
     )
     val portsArgs = (portsValue ++ conductrPorts).toSeq.flatMap(port => Seq("-p", s"${portMapping(instance, port)}:$port"))
 
@@ -193,28 +211,28 @@ object ConductRSandbox extends AutoPlugin {
   }
 
   private def conductrSandbox: Command = Command("sandbox", ConductrSandboxHelp)(_ => Parsers.conductrSandboxParser) {
-    case (prevState, RunSubtask) =>
+    case (prevState, RunSubtask(featureNames)) =>
       implicit val extracted = Project.extract(prevState)
       prevState.get(WithDebugAttrKey) match {
         case Some(_) =>
           extracted.runTask(stopConductRs, prevState)
           val withoutDebugState = disableDebugMode(prevState)
-          runSandboxAndSetSettings(withoutDebugState, controlServerSetting)
+          runSandboxAndSetSettings(withoutDebugState, controlServerSetting, featureNames)
 
         case None =>
-          runSandboxAndSetSettings(prevState, controlServerSetting)
+          runSandboxAndSetSettings(prevState, controlServerSetting, featureNames)
       }
 
-    case (prevState, DebugSubtask) =>
+    case (prevState, DebugSubtask(featureNames)) =>
       implicit val extracted = Project.extract(prevState)
       prevState.get(WithDebugAttrKey) match {
         case Some(_) =>
-          runSandboxAndSetSettings(prevState, controlServerSetting ++ debugSetting)
+          runSandboxAndSetSettings(prevState, controlServerSetting ++ debugSetting, featureNames)
 
         case None =>
           extracted.runTask(stopConductRs, prevState)
           val debugState = enableDebugMode(prevState)
-          runSandboxAndSetSettings(debugState, controlServerSetting ++ debugSetting)
+          runSandboxAndSetSettings(debugState, controlServerSetting ++ debugSetting, featureNames)
       }
 
     case (prevState, StopSubtask) =>
@@ -223,9 +241,14 @@ object ConductRSandbox extends AutoPlugin {
       prevState
   }
 
-  private def runSandboxAndSetSettings(state: State, settings: Seq[Def.Setting[_]])(implicit extracted: Extracted): State = {
-    extracted.runTask(runConductRs, state)
-    extracted.append(settings, state)
+  private def runSandboxAndSetSettings(state: State, settings: Seq[Def.Setting[_]], features: Set[String])(implicit extracted: Extracted): State = {
+    val featuresState =
+      if (features.isEmpty)
+        state.remove(WithFeaturesAttrKey)
+      else
+        state.put(WithFeaturesAttrKey, features.map(Feature(_)))
+    extracted.runTask(runConductRs, featuresState)
+    extracted.append(settings, featuresState)
   }
 
   private def enableDebugMode(state: State): State =
@@ -255,13 +278,31 @@ object ConductRSandbox extends AutoPlugin {
 
   private object Parsers {
     lazy val conductrSandboxParser = (Space ~> (runSubtask | debugSubtask | stopSubtask))
-    def runSubtask: Parser[RunSubtask.type] = token("run") map { case _ => RunSubtask }
-    def debugSubtask: Parser[DebugSubtask.type] = token("debug") map { case _ => DebugSubtask }
+    def runSubtask: Parser[RunSubtask] =
+      (token("run") ~> OptSpace ~> withFeatures.?) map { case features => RunSubtask(features.toSet.flatten) }
+    def debugSubtask: Parser[DebugSubtask] =
+      (token("debug") ~> OptSpace ~> withFeatures.?) map { case features => DebugSubtask(features.toSet.flatten) }
     def stopSubtask: Parser[StopSubtask.type] = token("stop") map { case _ => StopSubtask }
+
+    def withFeatures: Parser[Set[String]] = "--withFeatures" ~> Space ~> features
+    def features: Parser[Set[String]] =
+      repeatDep((remainingFeatures: Seq[String]) =>
+        StringBasic.examples(FixedSetExamples(ConductrFeatures diff remainingFeatures.toSet), 1, true), Space).map(_.toSet)
+
+    final val ConductrFeatures = Set("visualization", "logging")
   }
 
   private sealed trait ConductrSandboxSubtask
-  private case object RunSubtask extends ConductrSandboxSubtask
-  private case object DebugSubtask extends ConductrSandboxSubtask
+  private case class RunSubtask(features: Set[String]) extends ConductrSandboxSubtask
+  private case class DebugSubtask(features: Set[String]) extends ConductrSandboxSubtask
   private case object StopSubtask extends ConductrSandboxSubtask
+
+  private case class Feature(name: String, port: Int)
+  private object Feature {
+    def apply(name: String): Feature =
+      name match {
+        case "visualization" => Feature(name, 9999)
+        case "logging"       => Feature(name, 9200)
+      }
+  }
 }

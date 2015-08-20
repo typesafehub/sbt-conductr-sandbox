@@ -23,7 +23,7 @@ lazy val frontend = (project in file("modules/frontend"))
     BundleKeys.diskSpace := 50.MiB,
     BundleKeys.roles := Set("frontend"),
     BundleKeys.endpoints := Map("frontend" -> Endpoint("http", services = Set(URI("http://:9000")))),
-    SandboxKeys.debugPort := 9999
+    SandboxKeys.debugPort := 5555
   )
 
 lazy val backend = (project in file("modules/backend"))
@@ -47,10 +47,12 @@ checkDockerContainers := {
     """9004/tcp -> 0.0.0.0:9004""",
     """9005/tcp -> 0.0.0.0:9005""",
     """9006/tcp -> 0.0.0.0:9006""",
+    """9200/tcp -> 0.0.0.0:9200""",
+    """9999/tcp -> 0.0.0.0:9909""",
     """1111/tcp -> 0.0.0.0:1101""",
     """2222/tcp -> 0.0.0.0:2202""",
     """8888/tcp -> 0.0.0.0:8808""",
-    """9999/tcp -> 0.0.0.0:9909""",
+    """5555/tcp -> 0.0.0.0:5505""",
     """2999/tcp -> 0.0.0.0:2909"""
   )
   expectedLinesCond0.foreach(line => contentCond0 should include(line))

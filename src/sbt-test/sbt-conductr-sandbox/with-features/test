@@ -1,0 +1,11 @@
+> sandbox run --withFeatures visualization logging
+
+> checkPorts
+
+> checkEnvs
+
+> waitForBundles
+
+> checkConnection
+
+> sandbox stop
