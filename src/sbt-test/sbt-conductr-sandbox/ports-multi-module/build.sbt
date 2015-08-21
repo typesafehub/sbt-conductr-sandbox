@@ -6,8 +6,7 @@ version := "0.1.0-SNAPSHOT"
 
 // ConductR global keys
 SandboxKeys.ports in Global := Set(1111, 2222)
-SandboxKeys.image in Global := "conductr/conductr"
-SandboxKeys.nrOfContainers in Global := 2
+SandboxKeys.image in Global := "typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev"
 
 lazy val common = (project in file("modules/common"))
   .enablePlugins(ConductRSandbox)
@@ -56,17 +55,4 @@ checkDockerContainers := {
   )
   expectedLinesCond0.foreach(line => contentCond0 should include(line))
 
-  // cond-1
-  val contentCond1 = s"docker port cond-1".!!
-  val expectedLinesCond1 = Set(
-    """9004/tcp -> 0.0.0.0:9014""",
-    """9005/tcp -> 0.0.0.0:9015""",
-    """9006/tcp -> 0.0.0.0:9016""",
-    """1111/tcp -> 0.0.0.0:1111""",
-    """2222/tcp -> 0.0.0.0:2212""",
-    """8888/tcp -> 0.0.0.0:8818""",
-    """9999/tcp -> 0.0.0.0:9919""",
-    """2999/tcp -> 0.0.0.0:2919"""
-  )
-  expectedLinesCond1.foreach(line => contentCond1 should include(line))
 }
