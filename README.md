@@ -22,6 +22,8 @@ Then enable the `ConductRSandbox` plugin for your module. For example:
 lazy val root = (project in file(".")).enablePlugins(ConductRSandbox)
 ```
 
+### Starting ConductR sandbox
+
 To run the sandbox environment use the following command:
 
 ```scala
@@ -30,15 +32,61 @@ sandbox run
 
 > Note that the ConductR cluster will take a few seconds to become available and so any initial command that you send to it may not work immediately.
 
-Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the `conductr/conductr-dev` image from the public Docker registry).
+Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the image from the public Docker registry).
 
-To stop the cluster use: 
+If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands will automatically communicate with the Docker cluster managed by the sandbox.
+
+#### Starting with ConductR features
+
+To enable optional ConductR features for your sandbox specify the `--withFeatures` option during startup, e.g.:
+    
+```scala
+[my-app] sandbox run --withFeatures visualization logging
+[info] Running ConductR...
+[info] Running container cond-0 exposing 192.168.59.103:9000 192.168.59.103:9909...
+```
+
+Check out the [Features](#features) section for more information.
+
+### Debugging application in ConductR sandbox
+
+It is possible to debug your application inside of the ConductR sandbox:
+
+1. Start ConductR sandbox in debug mode:
+
+    ```scala
+    sandbox debug
+    ```
+2. This exposes a debug port to docker and the ConductR container. By default the debug port is set to `5005` which is the default port for remote debugging in IDEs such as IntelliJ. If you are happy with the default setting skip this step. Otherwise specify another port in the `build.sbt`:
+
+    ```scala
+    SandboxKeys.debugPort := 5432
+    ```    
+4. Load and run your bundle to the sandbox, e.g. by using [sbt-conductr](https://github.com/sbt/sbt-conductr):
+
+    ```scala
+    conduct load <HIT THE TAB KEY AND THEN RETURN>
+    conduct run my-app
+    ```
+
+You should be now able to remotely debug the bundle inside the ConductRs sandbox with your favorite IDE.    
+
+### Stopping ConductR sandbox
+
+To stop the sandbox use: 
 
 ```scala
 sandbox stop
 ```
 
-If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands will automatically communicate with the Docker cluster managed by the sandbox.
+## Features
+
+ConductR provides additional features which can be optionally enabled:
+
+Name          | CondutR port | Docker port | Description
+--------------|--------------|-------------|------------
+visualization | 9999         | 9909        | Provides a web interface to visualize the ConductR cluster together with deployed and running bundles.  After enabling the feature, access it at http://{docker-host-ip}:9909.
+logging       | 9200         | 9200        | Consolidates the logging output of ConductR itself and the bundles that it executes. To view the consolidated log messsages enable [sbt-conductr](https://github.com/sbt/sbt-conductr) and then `conduct logs conductr-elasticsearch`.
 
 ## Docker Container Naming
 
