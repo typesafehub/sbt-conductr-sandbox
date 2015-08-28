@@ -4,8 +4,4 @@
 
 > checkEnvs
 
-> waitForBundles
-
-> checkConnection
-
 > sandbox stop

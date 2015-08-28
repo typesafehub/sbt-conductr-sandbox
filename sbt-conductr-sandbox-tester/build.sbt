@@ -14,6 +14,5 @@ BundleKeys.startCommand := Seq("-Xms1G")
 
 BundleKeys.configurationName := "frontend"
 
-SandboxKeys.image in Global := "typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev"
 SandboxKeys.ports in Global := Set(9999)
 SandboxKeys.debugPort := 5432

@@ -6,7 +6,6 @@ version := "0.1.0-SNAPSHOT"
 
 // ConductR global keys
 SandboxKeys.ports in Global := Set(1111, 2222)
-SandboxKeys.image in Global := "typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev"
 
 lazy val common = (project in file("modules/common"))
   .enablePlugins(ConductRSandbox)
