@@ -22,6 +22,10 @@ object Import {
       "The Docker image to use. By default `typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `typesafe-docker-internal-docker.bintray.io/conductr/conductr`."
     )
 
+    val imageVersion = SettingKey[String](
+      "conductr-sandbox-version",
+      "The version of the Docker image to use. Must be set. To obtain the current version and additional information, please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com.")
+
     val ports = SettingKey[Set[Int]](
       "conductr-sandbox-ports",
       "A sequence of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`."
@@ -109,10 +113,14 @@ object ConductRSandbox extends AutoPlugin {
 
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
   private def runConductRsTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
+    val imageVer = (imageVersion in Global).?.map(_.getOrElse {
+      fail("imageVersion. imageVersion must be set. Please visit https://www.typesafe.com/product/conductr/developer for current version information.")
+      ""
+    }).value
 
     if ((image in Global).value == ConductRDevImage && s"docker images -q $ConductRDevImage".!!.isEmpty) {
       streams.value.log.info("Pulling down the development version of ConductR * * * SINGLE NODED AND NOT FOR PRODUCTION USAGE * * *")
-      s"docker pull $ConductRDevImage".!(streams.value.log)
+      s"docker pull $ConductRDevImage:$imageVer".!(streams.value.log)
     }
 
     val features = state.value.get(WithFeaturesAttrKey).toSet.flatten
@@ -148,7 +156,7 @@ object ConductRSandbox extends AutoPlugin {
           container,
           cond0Ip,
           (envs in Global).value,
-          (image in Global).value,
+          s"$ConductRDevImage:$imageVer",
           (logLevel in Global).value,
           allPorts,
           features.map(_.name)
