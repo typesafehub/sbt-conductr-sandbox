@@ -1,8 +1,6 @@
 import org.scalatest.Matchers._
 import ByteConversions._
 
-import scala.util.Try
-
 lazy val root = (project in file(".")).enablePlugins(ConductRSandbox)
 
 name := "with-features"
@@ -33,24 +31,4 @@ checkEnvs := {
   val content = "docker inspect --format='{{.Config.Env}}' cond-0".!!
   val expectedContent = "CONDUCTR_FEATURES=visualization,logging"
   content should include(expectedContent)
-}
-
-val waitForBundles = taskKey[Unit]("Wait that bundles has been started.")
-waitForBundles := {
-  Thread.sleep(30000)
-}
-
-val checkConnection = taskKey[Unit]("Check if the features are reachable.")
-checkConnection := {
-  val dockerIp =
-    Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse("hostname".!!.trim)
-
-  def curl(port: Int): String =
-    (s"curl -IL http://$dockerIp:$port 2>/dev/null" #| "head -n 1").!!
-
-  val visualization_status_code = curl(9909)
-  visualization_status_code should include("200")
-
-  val logging_status_code = curl(9200)
-  logging_status_code should include("503")
 }
