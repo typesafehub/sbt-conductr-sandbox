@@ -1,3 +1,5 @@
+> 'set SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "0.1.0")'
+
 > sandbox run
 
 > checkConductRIsRunning
