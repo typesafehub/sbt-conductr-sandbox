@@ -153,7 +153,7 @@ The following settings are provided under the `SandboxKeys` object:
 Name              | Scope   | Description
 ------------------|---------|------------
 envs              | Global  | A `Map[String, String]` of environment variables to be set for each ConductR container.
-image             | Global  | The Docker image to use. By default `typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `typesafe-docker-internal-docker.bintray.io/conductr/conductr`.
+image             | Global  | The Docker image to use. By default `typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr-dev` is used i.e. the single node version of ConductR.
 imageVersion      | Global  | The version of the Docker image to use. Must be set. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for the current version and additional information.
 ports             | Global  | A `Seq[Int]` of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`.
 debugPort         | Project | Debug port to be made public to the ConductR containers if the sandbox gets started in [debug mode](#Commands). The debug ports of each sbt project setting will be used. If `sbt-bundle` is enabled the JVM argument `-jvm-debug $debugPort` is  additionally added to the `startCommand` of `sbt-bundle`. Default is 5005.

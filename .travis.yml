@@ -7,10 +7,6 @@ env:
     - DOCKER_HOST=tcp://$HOST_IP:2375
     - DOCKER_PORT_RANGE=2400:2500
     - SLIRP_PORTS=$(seq 2375 2500)
-    - BINTRAY_USERNAME=engops-readonly
-    - BINTRAY_EMAIL=engops+travis@typesafe.com
-    # BINTRAY_PASSWORD
-    - secure: "A8vDZsyJtCcE+7Jg5E3bM4xw+6luUzSC92BSPWt0JuoEA6FtF3d8ghpbyAzntUloZxj4ty7ijYsRcLQHUPQAT+scmKanhqT1C8/rT56X3BRln2SxMTHstTmo8FSh5iRGfs9QHevkRb9a1HpPkzAMON0X4GKkKMGLL2+zj97DNKTvxVKuvHZOwBjSswrl0L99MngwETUg8bFl1FzfJxN21EK7b8KBii39XQDuLQaznQVcm2MfuSlFiCaokMYYq5b5faNWp6LEBP4ZjIPQlsBGnqAXblzr1W0zLcuBctEaNuA+U7E3PksjLIF8rIKVellp18yDs7ZxcrBlQxFlU1DZjnwsBaEgUZRg1TSJ/kTowk2LF7McoiQahuefJbPl/fyapgJ8hW8Xi4F2DyyS5WnjHCiHUyKKlQGFZ0RZdqtwzTrA6XOr6pmxEFD2NLGa0rR7Yyj8ypiH6LMpppwoH986m7XrOU8Uy8q+GxOXukjMRgR0inUaZq/UKG1PwcdU+HRB+DUBUC0uU1hZTjLJVYJu/IcXF4eirshBIFJHuw2xl4JW18hJfxoIsF1ZVAW9yyUUuTcbVrmaKBJ4QLlR2eap4vHlFFyJAVrelmVwV4oifVTlcdlBBC34boyTQSvGEHQfUCBlRqUfFCyAFsSDk0NmUWdb2ek/0RasrIVujiZzZYI="    
 
 before_install:
   - sudo sh -c "echo deb https://get.docker.com/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
@@ -27,6 +23,5 @@ install:
 before_script:
   - "sekexe/run 'mount -t tmpfs -o size=8g tmpfs /var/lib/docker && docker -d -H tcp://0.0.0.0:2375' &"
   - "while ! docker info &> /dev/null ; do sleep 1; done"
-  - "docker login -u $BINTRAY_USERNAME -p $BINTRAY_PASSWORD -e $BINTRAY_EMAIL typesafe-docker-internal-docker.bintray.io"
 
 script: sbt scripted

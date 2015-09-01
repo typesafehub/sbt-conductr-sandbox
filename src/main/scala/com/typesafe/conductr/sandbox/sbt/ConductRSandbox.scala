@@ -19,7 +19,7 @@ object Import {
 
     val image = SettingKey[String](
       "conductr-sandbox-image",
-      "The Docker image to use. By default `typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `typesafe-docker-internal-docker.bintray.io/conductr/conductr`."
+      "The Docker image to use. By default `typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr`."
     )
 
     val imageVersion = SettingKey[String](
@@ -88,7 +88,7 @@ object ConductRSandbox extends AutoPlugin {
     }
   }
 
-  private final val ConductRDevImage = "typesafe-docker-internal-docker.bintray.io/conductr/conductr-dev"
+  private final val ConductRDevImage = "typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr-dev"
 
   private final val ConductrNamePrefix = "cond-"
 
