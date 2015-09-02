@@ -116,6 +116,7 @@ lazy val root = (project in file(".")).enablePlugins(ConductRPlugin, ConductRSan
 
 BundleKeys.endpoints := Map("sample-app" -> Endpoint("http", services = Set(uri("http://:9000"))))
 SandboxKeys.image in Global := "conductr/conductr"
+SandboxKeys.imageVersion in Global := "latest"
 SandboxKeys.nrOfContainers in Global := 3
 SandboxKeys.ports in Global := Set(1111)
 SandboxKeys.debugPort := 5095
