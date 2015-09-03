@@ -147,6 +147,30 @@ The web application becomes available on the IP addresses of the Docker containe
 
 As a convenience, `sandbox run` and `sandbox debug` reports each of the above mappings along with IP addresses.
 
+## Functions
+
+There is a `ConductRSandbox.runConductRs` function for starting the sandbox environment programmatically. This is useful for setting up test environments. Conversely there is a `ConductRSandbox.stopConductRs` function call can be made to close down the sandbox environment programmatically. The following listing shows how these functions can be used within an sbt integration test:
+
+```scala
+testOptions in IntegrationTest ++= Seq(
+  Tests.Setup { () =>
+    ConductRSandbox.stopConductRs(streams.value.log)
+    ConductRSandbox.runConductRs(
+      1,
+      Set.empty,
+      Map.empty,
+      (conductrImage in Global).value,
+      (conductrImageVersion in Global).value,
+      Set.empty,
+      streams.value.log,
+      "info")
+  },
+
+  Tests.Cleanup (() => ConductRSandbox.stopConductRs(streams.value.log))
+)
+```
+
+
 ## Settings
 
 The following settings are provided under the `SandboxKeys` object:
@@ -160,7 +184,6 @@ ports             | Global  | A `Seq[Int]` of ports to be made public by each of
 debugPort         | Project | Debug port to be made public to the ConductR containers if the sandbox gets started in [debug mode](#Commands). The debug ports of each sbt project setting will be used. If `sbt-bundle` is enabled the JVM argument `-jvm-debug $debugPort` is  additionally added to the `startCommand` of `sbt-bundle`. Default is 5005.
 logLevel          | Global  | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
 nrOfContainers    | Global  | Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development).
-runConductRs      | Global  | Starts the sandbox environment as a task - useful for setting up test environments within sbt. Note that a `ConductRSandbox.stopConductRs(logger)` function call can be made to close down the sandbox environment programmatically. `logger` is of sbt's type `ProcessLogger`. Therefore a `streams.value.log` can be provided.
 
 ## Commands
 
