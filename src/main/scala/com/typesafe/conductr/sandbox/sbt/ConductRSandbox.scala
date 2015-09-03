@@ -46,7 +46,7 @@ object Import {
       """Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development)."""
     )
 
-    val runConductRs = TaskKey[Unit](
+    val runConductRSandbox = TaskKey[Unit](
       "conductr-sandbox-run",
       "Starts the sandbox environment"
     )
@@ -67,7 +67,7 @@ object ConductRSandbox extends AutoPlugin {
       ports := Set.empty,
       logLevel := "info",
       nrOfContainers := 1,
-      runConductRs := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
+      runConductRSandbox := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
       commands := Seq(conductrSandbox)
     )
 
@@ -75,6 +75,45 @@ object ConductRSandbox extends AutoPlugin {
     super.projectSettings ++ Seq(
       debugPort := 5005
     )
+
+  /**
+   * Run the ConductRs
+   */
+  def runConductRs(
+    nrOfContainers: Int,
+    allPorts: Set[Int],
+    envs: Map[String, String],
+    conductrImage: String,
+    conductrImageVersion: String,
+    featureNames: Set[String],
+    log: ProcessLogger,
+    logLevel: String): Unit = {
+
+    log.info("Running ConductR...")
+    val dockerHostIp = resolveDockerHostIp()
+    for (i <- 0 until nrOfContainers) {
+      val container = s"$ConductrNamePrefix$i"
+      val containers = s"docker ps -q -f name=$container".!!
+      if (containers.isEmpty) {
+        val portsDesc = allPorts.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
+        // Display the ports on the command line. Only if the user specifies a certain feature, then
+        // the corresponding port will be displayed when running 'sandbox run' or 'sandbox debug'
+        log.info(s"Running container $container exposing $portsDesc...")
+        val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
+        runConductRCmd(
+          i,
+          container,
+          cond0Ip,
+          envs,
+          s"$conductrImage:$conductrImageVersion",
+          logLevel,
+          allPorts,
+          featureNames
+        ).!(log)
+      } else
+        log.info(s"Container $container already exists, leaving it alone")
+    }
+  }
 
   /**
    * Stop the ConductRs
@@ -140,31 +179,16 @@ object ConductRSandbox extends AutoPlugin {
 
     val debugPorts = state.value.get(WithDebugAttrKey).fold(Set.empty[Int])(_ => debugPort.?.all(filter).value.flatten.toSet)
 
-    streams.value.log.info("Running ConductR...")
-    val dockerHostIp = resolveDockerHostIp()
-    for (i <- 0 until (nrOfContainers in Global).value) {
-      val container = s"$ConductrNamePrefix$i"
-      val containers = s"docker ps -q -f name=$container".!!
-      if (containers.isEmpty) {
-        val allPorts = bundlePorts ++ featurePorts ++ debugPorts ++ (ports in Global).value
-        val portsDesc = allPorts.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
-        // Display the ports on the command line. Only if the user specifies a certain feature, then
-        // the corresponding port will be displayed when running 'sandbox run' or 'sandbox debug'
-        streams.value.log.info(s"Running container $container exposing $portsDesc...")
-        val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
-        runConductRCmd(
-          i,
-          container,
-          cond0Ip,
-          (envs in Global).value,
-          s"$conductrImage:$conductrImageVersion",
-          (logLevel in Global).value,
-          allPorts,
-          features.map(_.name)
-        ).!(streams.value.log)
-      } else
-        streams.value.log.warn(s"Container $container already exists, leaving it alone")
-    }
+    runConductRs(
+      (nrOfContainers in Global).value,
+      bundlePorts ++ featurePorts ++ debugPorts ++ (ports in Global).value,
+      (envs in Global).value,
+      conductrImage,
+      conductrImageVersion,
+      features.map(_.name),
+      streams.value.log,
+      (logLevel in Global).value
+    )
   }
 
   private def runConductRCmd(
@@ -253,7 +277,7 @@ object ConductRSandbox extends AutoPlugin {
         state.remove(WithFeaturesAttrKey)
       else
         state.put(WithFeaturesAttrKey, features.map(Feature(_)))
-    extracted.runTask(runConductRs, featuresState)
+    extracted.runTask(runConductRSandbox, featuresState)
     extracted.append(settings, featuresState)
   }
 
