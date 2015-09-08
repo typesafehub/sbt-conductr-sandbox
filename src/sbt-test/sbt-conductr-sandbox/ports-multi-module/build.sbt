@@ -9,13 +9,12 @@ SandboxKeys.ports in Global := Set(1111, 2222)
 SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.9")
 
 lazy val common = (project in file("modules/common"))
-  .enablePlugins(ConductRSandbox)
   .settings(
     SandboxKeys.debugPort := 8888
   )
 
 lazy val frontend = (project in file("modules/frontend"))
-  .enablePlugins(ConductRPlugin, ConductRSandbox)
+  .enablePlugins(JavaAppPackaging)
   .dependsOn(common)
   .settings(
     BundleKeys.nrOfCpus := 1.0,
@@ -27,7 +26,7 @@ lazy val frontend = (project in file("modules/frontend"))
   )
 
 lazy val backend = (project in file("modules/backend"))
-  .enablePlugins(ConductRPlugin, ConductRSandbox)
+  .enablePlugins(JavaAppPackaging)
   .dependsOn(common)
   .settings(
     BundleKeys.nrOfCpus := 1.0,

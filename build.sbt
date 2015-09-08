@@ -23,8 +23,7 @@ ScalariformKeys.preferences := ScalariformKeys.preferences.value
   .setPreference(PreserveDanglingCloseParenthesis, true)
 
 resolvers += Resolver.bintrayRepo("typesafe", "maven-releases")
-addSbtPlugin("com.typesafe.sbt" % "sbt-bundle"        % "1.0.0")
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.0.0")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.0.1")
 
 releaseSettings
 ReleaseKeys.versionBump := sbtrelease.Version.Bump.Minor

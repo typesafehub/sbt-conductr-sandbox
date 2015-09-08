@@ -60,6 +60,8 @@ object ConductRSandbox extends AutoPlugin {
 
   val autoImport = Import
 
+  override def trigger = allRequirements
+
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ Seq(
       envs := Map.empty,

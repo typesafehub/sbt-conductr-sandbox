@@ -1,6 +1,6 @@
 import ByteConversions._
 
-lazy val root = (project in file(".")).enablePlugins(ConductRPlugin, ConductRSandbox)
+lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 
 name := "simple-test"
 

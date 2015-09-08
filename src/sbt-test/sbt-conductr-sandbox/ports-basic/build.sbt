@@ -1,7 +1,7 @@
 import org.scalatest.Matchers._
 import ByteConversions._
 
-lazy val root = (project in file(".")).enablePlugins(ConductRPlugin, ConductRSandbox)
+lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 
 name := "ports-basic"
 
