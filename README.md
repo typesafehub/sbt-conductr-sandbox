@@ -18,11 +18,7 @@ Declare the plugin (typically in a `plugins.sbt`):
 addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.0.5")
 ```
 
-Then enable the `ConductRSandbox` plugin for your module. For example:
-
-```scala
-lazy val root = (project in file(".")).enablePlugins(ConductRSandbox)
-```
+Nothing more is required to enable the plugin.
 
 ### Starting ConductR sandbox
 
@@ -112,7 +108,7 @@ The following ports are exposed to the ConductR and Docker containers:
 Your application defines these settings in the `build.sbt`:
 
 ```
-lazy val root = (project in file(".")).enablePlugins(ConductRPlugin, ConductRSandbox)
+lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 
 BundleKeys.endpoints := Map("sample-app" -> Endpoint("http", services = Set(uri("http://:9000"))))
 SandboxKeys.image in Global := "conductr/conductr"
