@@ -88,10 +88,10 @@ sandbox stop
 
 ConductR provides additional features which can be optionally enabled:
 
-Name          | CondutR port | Docker port | Description
---------------|--------------|-------------|------------
-visualization | 9999         | 9909        | Provides a web interface to visualize the ConductR cluster together with deployed and running bundles.  After enabling the feature, access it at http://{docker-host-ip}:9909.
-logging       | 9200         | 9200        | Consolidates the logging output of ConductR itself and the bundles that it executes. To view the consolidated log messsages enable [sbt-conductr](https://github.com/sbt/sbt-conductr) and then `conduct logs conductr-elasticsearch`.
+Name          | CondutR ports | Docker ports | Description
+--------------|---------------|-------------|------------
+visualization | 9999          | 9909        | Provides a web interface to visualize the ConductR cluster together with deployed and running bundles.  After enabling the feature, access it at http://{docker-host-ip}:9909.
+logging       | 9200, 5601    | 9200, 5601  | Consolidates the logging output of ConductR itself and the bundles that it executes. To view the consolidated log messsages access http://{docker-host-ip}:5601 or enable [sbt-conductr](https://github.com/sbt/sbt-conductr) and then `conduct logs {bundle-name}`.
 
 ## Docker Container Naming
 
