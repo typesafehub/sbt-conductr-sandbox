@@ -7,11 +7,13 @@ name := "with-features"
 
 version := "0.1.0-SNAPSHOT"
 
+val envValue = "-dSomeBundleKey=100"
+
 // ConductR bundle keys
 BundleKeys.nrOfCpus := 1.0
 BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
-
+SandboxKeys.envs in Global := Map("CONDUCTR_ARGS" -> envValue)
 SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.9")
 
 /**
@@ -31,6 +33,8 @@ checkPorts := {
 val checkEnvs = taskKey[Unit]("Check if environment variables for features are set.")
 checkEnvs := {
   val content = "docker inspect --format='{{.Config.Env}}' cond-0".!!
-  val expectedContent = "CONDUCTR_FEATURES=visualization,logging"
-  content should include(expectedContent)
+  val expectedConductrFeatures = "CONDUCTR_FEATURES=visualization,logging"
+  content should include(expectedConductrFeatures)
+  val expectedConductrArgs = s"CONDUCTR_ARGS=$envValue -Dcontrail.syslog.server.port=9200 -Dcontrail.syslog.server.elasticsearch.enabled=on"
+  content should include(expectedConductrArgs)
 }
