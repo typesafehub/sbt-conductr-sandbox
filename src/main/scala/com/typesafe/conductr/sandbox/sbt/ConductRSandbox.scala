@@ -201,7 +201,7 @@ object ConductRSandbox extends AutoPlugin {
     imageValue: String,
     logLevelValue: String,
     portsValue: Set[Int],
-    featureNames: Set[String]): String = {
+    featureNames: Set[String]): Seq[String] = {
 
     val command = Seq(
       "docker",
@@ -220,7 +220,7 @@ object ConductRSandbox extends AutoPlugin {
         Map.empty
       else
         Map("CONDUCTR_FEATURES" -> featureNames.mkString(","))
-    val envsArgs = (logLevelEnv ++ syslogEnv ++ envsValue ++ conductrFeaturesArgs).map { case (k, v) => s"-e $k=$v" }.toSeq
+    val envsArgs = (logLevelEnv ++ syslogEnv ++ envsValue ++ conductrFeaturesArgs).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
 
     // Expose always the feature related ports even if the are not specified with `--withFeatures`.
     // Therefor these ports are also exposed if only the `runConductRs` tasks is executed (e.g. in testing)
@@ -238,8 +238,8 @@ object ConductRSandbox extends AutoPlugin {
       imageValue,
       "--discover-host-ip"
     ) ++ seedNodeArg
-
-    (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs).mkString(" ")
+    
+    (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs)
   }
 
   private def conductrSandbox: Command = Command("sandbox", ConductrSandboxHelp)(_ => Parsers.conductrSandboxParser) {
