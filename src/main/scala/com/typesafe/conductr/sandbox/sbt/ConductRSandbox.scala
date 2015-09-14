@@ -51,6 +51,19 @@ object Import {
       "Starts the sandbox environment"
     )
   }
+
+  case class SandboxFeature(name: String, port: Int, envs: Map[String, String] = Map.empty)
+  object SandboxFeature {
+    def apply(name: String): SandboxFeature =
+      name match {
+        case "visualization" =>
+          SandboxFeature(name, 9999)
+
+        case "logging" =>
+          SandboxFeature(name, 9200,
+            Map("CONDUCTR_ARGS" -> "-Dcontrail.syslog.server.port=9200 -Dcontrail.syslog.server.elasticsearch.enabled=on"))
+      }
+  }
 }
 
 object ConductRSandbox extends AutoPlugin {
@@ -87,7 +100,7 @@ object ConductRSandbox extends AutoPlugin {
     envs: Map[String, String],
     conductrImage: String,
     conductrImageVersion: String,
-    featureNames: Set[String],
+    features: Set[SandboxFeature],
     log: ProcessLogger,
     logLevel: String): Unit = {
 
@@ -110,7 +123,7 @@ object ConductRSandbox extends AutoPlugin {
           s"$conductrImage:$conductrImageVersion",
           logLevel,
           allPorts,
-          featureNames
+          features
         ).!(log)
       } else
         log.info(s"Container $container already exists, leaving it alone")
@@ -139,7 +152,7 @@ object ConductRSandbox extends AutoPlugin {
 
   private final val WithDebugAttrKey = AttributeKey[Unit]("conductr-sandbox-with-debug")
 
-  private final val WithFeaturesAttrKey = AttributeKey[Set[Feature]]("conductr-sandbox-with-features")
+  private final val WithFeaturesAttrKey = AttributeKey[Set[SandboxFeature]]("conductr-sandbox-with-features")
 
   private def inspectCond0Ip(): String =
     s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!.trim
@@ -187,7 +200,7 @@ object ConductRSandbox extends AutoPlugin {
       (envs in Global).value,
       conductrImage,
       conductrImageVersion,
-      features.map(_.name),
+      features,
       streams.value.log,
       (logLevel in Global).value
     )
@@ -201,7 +214,7 @@ object ConductRSandbox extends AutoPlugin {
     imageValue: String,
     logLevelValue: String,
     portsValue: Set[Int],
-    featureNames: Set[String]): Seq[String] = {
+    features: Set[SandboxFeature]): Seq[String] = {
 
     val command = Seq(
       "docker",
@@ -215,12 +228,16 @@ object ConductRSandbox extends AutoPlugin {
 
     val logLevelEnv = Map("AKKA_LOGLEVEL" -> logLevelValue)
     val syslogEnv = cond0Ip.map(ip => Map("SYSLOG_IP" -> ip)).getOrElse(Map.empty)
-    val conductrFeaturesArgs =
-      if (featureNames.isEmpty)
-        Map.empty
-      else
-        Map("CONDUCTR_FEATURES" -> featureNames.mkString(","))
-    val envsArgs = (logLevelEnv ++ syslogEnv ++ envsValue ++ conductrFeaturesArgs).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
+    val (conductrFeatureArgs, conductrFeatureEnvs) =
+      if (features.isEmpty)
+        Map.empty[String, String] -> Map.empty[String, String]
+      else {
+        val featureArgs = Map("CONDUCTR_FEATURES" -> features.map(_.name).mkString(","))
+        val featureEnvs = features.flatMap(_.envs).toMap
+        (featureArgs, featureEnvs)
+      }
+    val bundleEnvs = envsValue merge conductrFeatureEnvs
+    val envsArgs = (logLevelEnv ++ syslogEnv ++ bundleEnvs ++ conductrFeatureArgs).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
 
     // Expose always the feature related ports even if the are not specified with `--withFeatures`.
     // Therefor these ports are also exposed if only the `runConductRs` tasks is executed (e.g. in testing)
@@ -238,7 +255,7 @@ object ConductRSandbox extends AutoPlugin {
       imageValue,
       "--discover-host-ip"
     ) ++ seedNodeArg
-    
+
     (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs)
   }
 
@@ -278,7 +295,7 @@ object ConductRSandbox extends AutoPlugin {
       if (features.isEmpty)
         state.remove(WithFeaturesAttrKey)
       else
-        state.put(WithFeaturesAttrKey, features.map(Feature(_)))
+        state.put(WithFeaturesAttrKey, features.map(SandboxFeature(_)))
     extracted.runTask(runConductRSandbox, featuresState)
     extracted.append(settings, featuresState)
   }
@@ -328,13 +345,4 @@ object ConductRSandbox extends AutoPlugin {
   private case class RunSubtask(features: Set[String]) extends ConductrSandboxSubtask
   private case class DebugSubtask(features: Set[String]) extends ConductrSandboxSubtask
   private case object StopSubtask extends ConductrSandboxSubtask
-
-  private case class Feature(name: String, port: Int)
-  private object Feature {
-    def apply(name: String): Feature =
-      name match {
-        case "visualization" => Feature(name, 9999)
-        case "logging"       => Feature(name, 9200)
-      }
-  }
 }
