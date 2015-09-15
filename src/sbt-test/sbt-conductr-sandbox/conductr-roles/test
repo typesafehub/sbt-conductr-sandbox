@@ -1,0 +1,13 @@
+> sandbox run
+
+> checkConductrRolesByBundle
+
+> sandbox stop
+
+> 'set SandboxKeys.conductrRoles in Global := Seq(Set("conductr-role-1", "conductr-role-2"), Set("conductr-role-1"))'
+
+> sandbox run
+
+> checkConductrRolesBySandboxKey
+
+> sandbox stop

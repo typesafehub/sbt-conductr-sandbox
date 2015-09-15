@@ -143,6 +143,35 @@ The web application becomes available on the IP addresses of the Docker containe
 
 As a convenience, `sandbox run` and `sandbox debug` reports each of the above mappings along with IP addresses.
 
+## Roles
+
+ConductR uses roles to load and scale bundles to the respective nodes. For more information about it please refer to [Managing services documentation](http://conductr.typesafe.com/docs/1.0.x/ManageServices#Roles).
+
+`sbt-conductr-sandbox` automatically collects the bundle roles specified with `BundleKeys.roles` and adds them to each ConductR node. Therefor, by default your bundles can be loaded and scaled to all ConductR nodes. 
+It is also possible to provide a custom role configuration by specifying the `SandboxKeys.conductrRoles` setting: 
+
+```scala
+SandboxKeys.conductrRoles in Global := Seq(Set("muchMem", "myDB"))
+```
+
+This is only adding the roles `muchMem` and `myDB` to all ConductR nodes. The bundle roles are ignored in case `SandboxKeys.conductrRoles` is specified. Assigning different roles to nodes is also possible by specifying a set for each of the nodes:
+
+```scala
+SandboxKeys.nrOfContainers in Global := 2
+SandboxKeys.conductrRoles in Global := Seq(Set("muchMem"), Set("myDB"))
+```
+
+In this example bundles with the role `muchMem` would only be loaded and scaled to the first node and bundles with the role `myDB` only to the second node.
+
+If `nrOfContainers` is larger than the size of the `conductrRoles` sequence then the specified roles are subsequently applied to the remaining nodes.
+
+```scala
+SandboxKeys.nrOfContainers in Global := 4
+SandboxKeys.conductrRoles in Global := Seq(Set("muchMem", "frontend"), Set("myDB"))
+```
+
+This would load and scale all bundles with the roles `muchMem` and `frontend` to the first and third node and bundles with the role `myDB` to the second and fourth node.
+
 ## Functions
 
 There is a `ConductRSandbox.runConductRs` function for starting the sandbox environment programmatically. This is useful for setting up test environments. Conversely there is a `ConductRSandbox.stopConductRs` function call can be made to close down the sandbox environment programmatically. The following listing shows how these functions can be used within an sbt integration test:
@@ -180,6 +209,7 @@ ports             | Global  | A `Seq[Int]` of ports to be made public by each of
 debugPort         | Project | Debug port to be made public to the ConductR containers if the sandbox gets started in [debug mode](#Commands). The debug ports of each sbt project setting will be used. If `sbt-bundle` is enabled the JVM argument `-jvm-debug $debugPort` is  additionally added to the `startCommand` of `sbt-bundle`. Default is 5005.
 logLevel          | Global  | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
 nrOfContainers    | Global  | Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development).
+conductrRoles     | Global  | Sets additional roles to the ConductR nodes. Defaults to `Seq.empty`. If this settings is not set the bundle roles specified with `BundleKeys.roles` are used. To provide a custom role configuration specify a set of roles for each node. Example: Seq(Set("megaIOPS"), Set("muchMem", "myDB")) would add the role `megaIOPS` to first ConductR node. `muchMem` and `myDB` would be added to the second node. If `nrOfContainers` is larger than the size of the `conductrRoles` sequence then the specified roles are subsequently applied to the remaining nodes.
 
 ## Commands
 
