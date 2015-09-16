@@ -1,7 +1,5 @@
 package com.typesafe.conductr.sandbox.sbt
 
-import com.typesafe.sbt.bundle.Import.BundleKeys
-import com.typesafe.conductr.sbt.ConductRKeys
 import sbt._
 import sbt.Keys._
 import complete.DefaultParsers._
@@ -55,6 +53,8 @@ object Import {
 
 object ConductRSandbox extends AutoPlugin {
 
+  import com.typesafe.sbt.bundle.SbtBundle.autoImport._
+  import com.typesafe.conductr.sbt.ConductRPlugin.autoImport._
   import Import._
   import SandboxKeys._
 
@@ -238,7 +238,7 @@ object ConductRSandbox extends AutoPlugin {
       imageValue,
       "--discover-host-ip"
     ) ++ seedNodeArg
-    
+
     (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs)
   }
 
