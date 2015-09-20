@@ -46,6 +46,11 @@ object Import {
       """Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development)."""
     )
 
+    val conductrRoles = SettingKey[Seq[Set[String]]](
+      "conductr-sandbox-conductrRoles",
+      """Sets additional roles allowed by each ConductR node. By default this is Seq.empty. If no additional roles are set then ConductR is running only bundles configured with the role `web`. To add additional roles specify a set of roles for each node. Example: Seq(Set("megaIOPS"), Set("muchMem", "myDB")) would add the role `megaIOPS` to first ConductR node. `muchMem` and `myDB` would be added to the second node. If the `nrOfContainers` is larger than the size of the `conductrRoles` sequence then the specified roles are subsequently applied to the remaining nodes."""
+    )
+
     val runConductRSandbox = TaskKey[Unit](
       "conductr-sandbox-run",
       "Starts the sandbox environment"
@@ -69,6 +74,7 @@ object ConductRSandbox extends AutoPlugin {
       ports := Set.empty,
       logLevel := "info",
       nrOfContainers := 1,
+      conductrRoles := Seq.empty,
       runConductRSandbox := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
       commands := Seq(conductrSandbox)
     )
@@ -83,6 +89,7 @@ object ConductRSandbox extends AutoPlugin {
    */
   def runConductRs(
     nrOfContainers: Int,
+    conductrRoles: Seq[Set[String]],
     allPorts: Set[Int],
     envs: Map[String, String],
     conductrImage: String,
@@ -102,6 +109,7 @@ object ConductRSandbox extends AutoPlugin {
         // the corresponding port will be displayed when running 'sandbox run' or 'sandbox debug'
         log.info(s"Running container $container exposing $portsDesc...")
         val cond0Ip = if (i > 0) Some(inspectCond0Ip()) else None
+        val conductrContainerRoles = conductrRolesByContainer(conductrRoles, i)
         runConductRCmd(
           i,
           container,
@@ -110,12 +118,23 @@ object ConductRSandbox extends AutoPlugin {
           s"$conductrImage:$conductrImageVersion",
           logLevel,
           allPorts,
-          featureNames
+          featureNames,
+          conductrContainerRoles
         ).!(log)
       } else
         log.info(s"Container $container already exists, leaving it alone")
     }
   }
+
+  private def conductrRolesByContainer(conductrRoles: Seq[Set[String]], containerNr: Int): Set[String] =
+    conductrRoles match {
+      case Nil                                                    => Set.empty
+      case byContainerNr if containerNr + 1 <= conductrRoles.size => conductrRoles(containerNr)
+      case byRemainingContainer =>
+        val remainder = (containerNr + 1) % conductrRoles.size
+        val container = if (remainder == 0) conductrRoles.size else remainder
+        conductrRoles(container - 1)
+    }
 
   /**
    * Stop the ConductRs
@@ -181,8 +200,14 @@ object ConductRSandbox extends AutoPlugin {
 
     val debugPorts = state.value.get(WithDebugAttrKey).fold(Set.empty[Int])(_ => debugPort.?.all(filter).value.flatten.toSet)
 
+    val roles = (conductrRoles in Global).value match {
+      case Nil           => Seq(BundleKeys.roles.?.map(_.getOrElse(Set.empty)).all(filter).value.reduce(_ ++ _))
+      case conductrRoles => conductrRoles
+    }
+
     runConductRs(
       (nrOfContainers in Global).value,
+      roles,
       bundlePorts ++ featurePorts ++ debugPorts ++ (ports in Global).value,
       (envs in Global).value,
       conductrImage,
@@ -201,7 +226,8 @@ object ConductRSandbox extends AutoPlugin {
     imageValue: String,
     logLevelValue: String,
     portsValue: Set[Int],
-    featureNames: Set[String]): Seq[String] = {
+    featureNames: Set[String],
+    conductrRoles: Set[String]): Seq[String] = {
 
     val command = Seq(
       "docker",
@@ -215,12 +241,9 @@ object ConductRSandbox extends AutoPlugin {
 
     val logLevelEnv = Map("AKKA_LOGLEVEL" -> logLevelValue)
     val syslogEnv = cond0Ip.map(ip => Map("SYSLOG_IP" -> ip)).getOrElse(Map.empty)
-    val conductrFeaturesArgs =
-      if (featureNames.isEmpty)
-        Map.empty
-      else
-        Map("CONDUCTR_FEATURES" -> featureNames.mkString(","))
-    val envsArgs = (logLevelEnv ++ syslogEnv ++ envsValue ++ conductrFeaturesArgs).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
+    val conductrFeatureArgs = toMap("CONDUCTR_FEATURES", featureNames)(_.mkString(","))
+    val conductrRolesEnv = toMap("CONDUCTR_ROLES", conductrRoles)(_.mkString(","))
+    val envsArgs = (logLevelEnv ++ syslogEnv ++ conductrFeatureArgs ++ conductrRolesEnv).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
 
     // Expose always the feature related ports even if the are not specified with `--withFeatures`.
     // Therefor these ports are also exposed if only the `runConductRs` tasks is executed (e.g. in testing)
@@ -238,9 +261,15 @@ object ConductRSandbox extends AutoPlugin {
       imageValue,
       "--discover-host-ip"
     ) ++ seedNodeArg
-    
+
     (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs)
   }
+
+  private def toMap[A, B](key: String, trav: Traversable[A])(f: Traversable[A] => B): Map[String, B] =
+    if (trav.nonEmpty)
+      Map(key -> f(trav))
+    else
+      Map.empty[String, B]
 
   private def conductrSandbox: Command = Command("sandbox", ConductrSandboxHelp)(_ => Parsers.conductrSandboxParser) {
     case (prevState, RunSubtask(featureNames)) =>
