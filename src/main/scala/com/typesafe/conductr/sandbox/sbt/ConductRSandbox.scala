@@ -186,7 +186,7 @@ object ConductRSandbox extends AutoPlugin {
 
     val features = state.value.get(WithFeaturesAttrKey).toSet.flatten
 
-    val featurePorts = features.map(_.port)
+    val featurePorts = features.flatMap(_.port)
 
     val bundlePorts = BundleKeys.endpoints.?.map(_.getOrElse(Map.empty)).all(filter).value.reduce(_ ++ _)
       .flatMap {
@@ -248,6 +248,7 @@ object ConductRSandbox extends AutoPlugin {
     // Expose always the feature related ports even if the are not specified with `--withFeatures`.
     // Therefor these ports are also exposed if only the `runConductRs` tasks is executed (e.g. in testing)
     val conductrPorts = Set(
+      5601, // conductr-kibana bundle
       9004, // ConductR internal akka remoting
       9005, // ConductR controlServer
       9006, // ConductR bundleStreamServer
@@ -358,12 +359,12 @@ object ConductRSandbox extends AutoPlugin {
   private case class DebugSubtask(features: Set[String]) extends ConductrSandboxSubtask
   private case object StopSubtask extends ConductrSandboxSubtask
 
-  private case class Feature(name: String, port: Int)
+  private case class Feature(name: String, port: Set[Int])
   private object Feature {
     def apply(name: String): Feature =
       name match {
-        case "visualization" => Feature(name, 9999)
-        case "logging"       => Feature(name, 9200)
+        case "visualization" => Feature(name, Set(9999))
+        case "logging"       => Feature(name, Set(5601, 9200))
       }
   }
 }
