@@ -243,7 +243,7 @@ object ConductRSandbox extends AutoPlugin {
     val syslogEnv = cond0Ip.map(ip => Map("SYSLOG_IP" -> ip)).getOrElse(Map.empty)
     val conductrFeatureArgs = toMap("CONDUCTR_FEATURES", featureNames)(_.mkString(","))
     val conductrRolesEnv = toMap("CONDUCTR_ROLES", conductrRoles)(_.mkString(","))
-    val envsArgs = (logLevelEnv ++ syslogEnv ++ conductrFeatureArgs ++ conductrRolesEnv).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
+    val envsArgs = (envsValue ++ logLevelEnv ++ syslogEnv ++ conductrFeatureArgs ++ conductrRolesEnv).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
 
     // Expose always the feature related ports even if the are not specified with `--withFeatures`.
     // Therefor these ports are also exposed if only the `runConductRs` tasks is executed (e.g. in testing)
