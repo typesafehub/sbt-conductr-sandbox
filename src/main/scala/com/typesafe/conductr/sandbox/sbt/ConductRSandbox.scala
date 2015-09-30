@@ -351,7 +351,7 @@ object ConductRSandbox extends AutoPlugin {
       repeatDep((remainingFeatures: Seq[String]) =>
         StringBasic.examples(FixedSetExamples(ConductrFeatures diff remainingFeatures.toSet), 1, removeInvalidExamples = true), Space).map(_.toSet)
 
-    final val ConductrFeatures = Set("visualization", "logging")
+    final val ConductrFeatures = Set("visualization", "logging", "monitoring")
   }
 
   private sealed trait ConductrSandboxSubtask
@@ -365,6 +365,7 @@ object ConductRSandbox extends AutoPlugin {
       name match {
         case "visualization" => Feature(name, Set(9999))
         case "logging"       => Feature(name, Set(5601, 9200))
+        case "monitoring"    => Feature(name, Set.empty)
       }
   }
 }
