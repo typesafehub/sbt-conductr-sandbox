@@ -1,4 +1,4 @@
-> 'set SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.9")'
+> 'set SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.11")'
 
 > sandbox run
 

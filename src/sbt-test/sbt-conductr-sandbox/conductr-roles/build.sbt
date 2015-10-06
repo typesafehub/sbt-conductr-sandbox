@@ -17,7 +17,7 @@ BundleKeys.diskSpace := 10.MB
 BundleKeys.roles := Set("bundle-role-1", "bundle-role-2")
 
 // ConductR sandbox keys
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.9")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.11")
 
 val checkConductrRolesByBundle = taskKey[Unit]("Check that the bundle roles are used if no SandboxKeys.conductrRoles is specified.")
 checkConductrRolesByBundle := {
