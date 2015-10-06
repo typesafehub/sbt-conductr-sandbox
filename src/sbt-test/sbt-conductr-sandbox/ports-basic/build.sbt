@@ -16,7 +16,7 @@ BundleKeys.endpoints := Map("other" -> Endpoint("http", services = Set(URI("http
 // ConductR sandbox keys
 SandboxKeys.ports in Global := Set(1111, 2222)
 SandboxKeys.debugPort := 5432
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.9")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.11")
 
 /**
  * Check ports after 'sandbox run' command

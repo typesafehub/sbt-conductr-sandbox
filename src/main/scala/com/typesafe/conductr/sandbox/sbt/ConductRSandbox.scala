@@ -53,6 +53,16 @@ object Import {
       "conductr-sandbox-run",
       "Starts the sandbox environment"
     )
+
+    val hasRpLicense = SettingKey[Boolean](
+      "conductr-has-rp-license",
+      "Checks that the project has a reactive platform license"
+    )
+
+    val isSbtBuild = SettingKey[Boolean](
+      "conductr-is-sbt-build",
+      "True if the project is THE sbt build project."
+    )
   }
 }
 
@@ -76,12 +86,23 @@ object ConductRSandbox extends AutoPlugin {
       nrOfContainers := 1,
       conductrRoles := Seq.empty,
       runConductRSandbox := runConductRsTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
-      commands := Seq(conductrSandbox)
+      commands := Seq(conductrSandbox),
+      hasRpLicense := {
+        // Same logic as in https://github.com/typesafehub/reactive-platform
+        // Doesn't take reactive-platform as a dependency because it is not public.
+        val isMeta = (isSbtBuild in LocalRootProject).value
+        val base = (Keys.baseDirectory in LocalRootProject).value
+        val propFile = if (isMeta) base / TypesafePropertiesName else base / "project" / TypesafePropertiesName
+        propFile.exists
+      }
     )
 
   override def projectSettings: Seq[Def.Setting[_]] =
     super.projectSettings ++ Seq(
-      debugPort := 5005
+      debugPort := 5005,
+      // Here we try to detect what binary universe we exist inside, so we can
+      // accurately grab artifact reivisons.
+      isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project"
     )
 
   /**
@@ -150,6 +171,10 @@ object ConductRSandbox extends AutoPlugin {
 
   private final val ConductRDevImage = "typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr-dev"
 
+  private final val LatestConductRVersion = "1.0.11"
+
+  private final val TypesafePropertiesName = "typesafe.properties"
+
   private final val ConductrNamePrefix = "cond-"
 
   private final val ConductrPort = 9005
@@ -174,10 +199,13 @@ object ConductRSandbox extends AutoPlugin {
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
   private def runConductRsTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
     val conductrImage = (image in Global).value
-    val conductrImageVersion = (imageVersion in Global).?.map(_.getOrElse {
-      fail("imageVersion. imageVersion must be set. Please visit https://www.typesafe.com/product/conductr/developer for current version information.")
-      ""
-    }).value
+    val conductrImageVersion = (imageVersion in Global).?.value match {
+      case Some(version)                    => version
+      case hasLicense if hasRpLicense.value => LatestConductRVersion
+      case None =>
+        fail("imageVersion. imageVersion must be set. Please visit https://www.typesafe.com/product/conductr/developer for current version information.")
+        ""
+    }
 
     if (conductrImage == ConductRDevImage && s"docker images -q $ConductRDevImage".!!.isEmpty) {
       streams.value.log.info("Pulling down the development version of ConductR * * * SINGLE NODED AND NOT FOR PRODUCTION USAGE * * *")
