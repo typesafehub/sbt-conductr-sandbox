@@ -15,7 +15,7 @@ If you have not done so already, then please [install Docker](https://www.docker
 Declare the plugin (typically in a `plugins.sbt`):
 
 ```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.1.0")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.1.1")
 ```
 
 Nothing more is required to enable the plugin.
