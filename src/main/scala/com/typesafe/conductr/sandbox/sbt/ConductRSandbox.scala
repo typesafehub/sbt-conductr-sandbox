@@ -1,5 +1,7 @@
 package com.typesafe.conductr.sandbox.sbt
 
+import com.typesafe.conductr.sbt.ConductRPlugin
+import com.typesafe.sbt.bundle.SbtBundle
 import sbt._
 import sbt.Keys._
 import complete.DefaultParsers._
@@ -94,15 +96,39 @@ object ConductRSandbox extends AutoPlugin {
         val base = (Keys.baseDirectory in LocalRootProject).value
         val propFile = if (isMeta) base / TypesafePropertiesName else base / "project" / TypesafePropertiesName
         propFile.exists
-      }
+      },
+
+      // Internal keys
+      useDebugPort := false
     )
 
   override def projectSettings: Seq[Def.Setting[_]] =
     super.projectSettings ++ Seq(
       debugPort := 5005,
       // Here we try to detect what binary universe we exist inside, so we can
-      // accurately grab artifact reivisons.
-      isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project"
+      // accurately grab artifact revisions.
+      isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project",
+
+      // We redefine the start command here given that we want it to pick up debug options automatically
+      // when debug is required. The logic below takes care of inserting the debug option and also removing
+      // it when no longer required.
+      BundleKeys.startCommand in Bundle :=
+        Project.extract(state.value).getOpt(BundleKeys.executableScriptPath in Bundle).fold(Seq.empty[String]) {
+          Seq(_) ++
+            (if ((useDebugPort in Global).value) {
+              val existingJavaOptions = (javaOptions in Bundle).value
+              val jvmDebugOptionIdx = existingJavaOptions.indexWhere(_ == "-jvm-debug")
+              val cleanJavaOptions = if (jvmDebugOptionIdx > -1) {
+                val (o0, o1) = existingJavaOptions.splitAt(jvmDebugOptionIdx)
+                o0 ++ o1.drop(2)
+              } else {
+                existingJavaOptions
+              }
+              cleanJavaOptions ++ Seq("-jvm-debug", SandboxKeys.debugPort.value.toString)
+            } else {
+              (javaOptions in Bundle).value
+            })
+        }
     )
 
   /**
@@ -185,6 +211,8 @@ object ConductRSandbox extends AutoPlugin {
 
   private final val WithFeaturesAttrKey = AttributeKey[Set[Feature]]("conductr-sandbox-with-features")
 
+  private val useDebugPort = SettingKey[Boolean]("conductr-sandbox-use-debug-port", "")
+
   private def inspectCond0Ip(): String =
     s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!.trim
 
@@ -200,7 +228,7 @@ object ConductRSandbox extends AutoPlugin {
   private def runConductRsTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
     val conductrImage = (image in Global).value
     val conductrImageVersion = (imageVersion in Global).?.value match {
-      case Some(version)                    => version
+      case Some(versionValue)               => versionValue
       case hasLicense if hasRpLicense.value => LatestConductRVersion
       case None =>
         fail("imageVersion. imageVersion must be set. Please visit https://www.typesafe.com/product/conductr/developer for current version information.")
@@ -216,7 +244,7 @@ object ConductRSandbox extends AutoPlugin {
 
     val featurePorts = features.flatMap(_.port)
 
-    val bundlePorts = BundleKeys.endpoints.?.map(_.getOrElse(Map.empty)).all(filter).value.reduce(_ ++ _)
+    val bundlePorts = (BundleKeys.endpoints in Bundle).?.map(_.getOrElse(Map.empty)).all(filter).value.reduce(_ ++ _)
       .flatMap {
         case (_, endpoint) =>
           endpoint.services.map { uri =>
@@ -229,8 +257,8 @@ object ConductRSandbox extends AutoPlugin {
     val debugPorts = state.value.get(WithDebugAttrKey).fold(Set.empty[Int])(_ => debugPort.?.all(filter).value.flatten.toSet)
 
     val roles = (conductrRoles in Global).value match {
-      case Nil           => Seq(BundleKeys.roles.?.map(_.getOrElse(Set.empty)).all(filter).value.reduce(_ ++ _))
-      case conductrRoles => conductrRoles
+      case Nil                => Seq((BundleKeys.roles in Bundle).?.map(_.getOrElse(Set.empty)).all(filter).value.reduce(_ ++ _))
+      case conductrRolesValue => conductrRolesValue
     }
 
     runConductRs(
@@ -291,7 +319,7 @@ object ConductRSandbox extends AutoPlugin {
       "--discover-host-ip"
     ) ++ seedNodeArg
 
-    (command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs)
+    command ++ generalArgs ++ envsArgs ++ portsArgs ++ positionalArgs
   }
 
   private def toMap[A, B](key: String, trav: Traversable[A])(f: Traversable[A] => B): Map[String, B] =
@@ -302,43 +330,57 @@ object ConductRSandbox extends AutoPlugin {
 
   private def conductrSandbox: Command = Command("sandbox", ConductrSandboxHelp)(_ => Parsers.conductrSandboxParser) {
     case (prevState, RunSubtask(featureNames)) =>
-      implicit val extracted = Project.extract(prevState)
       prevState.get(WithDebugAttrKey) match {
         case Some(_) =>
           stopConductRs(prevState.log)
           val withoutDebugState = disableDebugMode(prevState)
-          runSandboxAndSetSettings(withoutDebugState, controlServerSetting, featureNames)
+          runSandbox(withoutDebugState, featureNames)
 
         case None =>
-          runSandboxAndSetSettings(prevState, controlServerSetting, featureNames)
+          runSandbox(prevState, featureNames)
       }
 
     case (prevState, DebugSubtask(featureNames)) =>
-      implicit val extracted = Project.extract(prevState)
       prevState.get(WithDebugAttrKey) match {
         case Some(_) =>
-          runSandboxAndSetSettings(prevState, controlServerSetting ++ debugSetting, featureNames)
+          runSandbox(prevState, featureNames, debugMode = true)
 
         case None =>
           stopConductRs(prevState.log)
           val debugState = enableDebugMode(prevState)
-          runSandboxAndSetSettings(debugState, controlServerSetting ++ debugSetting, featureNames)
+          runSandbox(debugState, featureNames, debugMode = true)
       }
 
     case (prevState, StopSubtask) =>
-      // Stop sandbox cluster
-      stopConductRs(prevState.log)
-      prevState
+      stopSandbox(prevState)
   }
 
-  private def runSandboxAndSetSettings(state: State, settings: Seq[Def.Setting[_]], features: Set[String])(implicit extracted: Extracted): State = {
-    val featuresState =
+  private def runSandbox(state: State, features: Set[String], debugMode: Boolean = false): State = {
+    val extracted = Project.extract(state)
+
+    val state1 =
       if (features.isEmpty)
         state.remove(WithFeaturesAttrKey)
       else
         state.put(WithFeaturesAttrKey, features.map(Feature(_)))
-    extracted.runTask(runConductRSandbox, featuresState)
-    extracted.append(settings, featuresState)
+
+    val (state2, _) = extracted.runTask(runConductRSandbox, state1)
+
+    val newSettings = Seq(
+      ConductRKeys.conductrControlServerUrl in Global := ConductrSandboxControlServerUrl,
+      useDebugPort in Global := debugMode
+    )
+
+    extracted.append(newSettings, state2)
+  }
+
+  private def stopSandbox(state: State): State = {
+    val newSettings = Seq(
+      useDebugPort in Global := false
+    )
+    val s1 = Project.extract(state).append(newSettings, state)
+    stopConductRs(s1.log)
+    s1
   }
 
   private def enableDebugMode(state: State): State =
@@ -346,19 +388,6 @@ object ConductRSandbox extends AutoPlugin {
 
   private def disableDebugMode(state: State): State =
     state.remove(WithDebugAttrKey)
-
-  private def debugSetting(implicit extracted: Extracted): Seq[Def.Setting[_]] = {
-    extracted
-      .getOpt(BundleKeys.startCommand)
-      .map(_ => BundleKeys.startCommand += s"-jvm-debug ${SandboxKeys.debugPort.value}")
-      .toList
-  }
-
-  private def controlServerSetting(implicit extracted: Extracted): Seq[Def.Setting[_]] =
-    extracted
-      .getOpt(ConductRKeys.conductrControlServerUrl in Global)
-      .map(_ => ConductRKeys.conductrControlServerUrl in Global := ConductrSandboxControlServerUrl)
-      .toList
 
   private final val ConductrSandboxHelp = Help.briefOnly(Seq(
     "run" -> "Run the ConductR Cluster in sandbox mode",
