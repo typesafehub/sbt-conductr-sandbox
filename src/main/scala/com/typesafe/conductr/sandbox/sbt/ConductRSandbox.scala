@@ -244,15 +244,17 @@ object ConductRSandbox extends AutoPlugin {
 
     val featurePorts = features.flatMap(_.port)
 
-    val bundlePorts = (BundleKeys.endpoints in Bundle).?.map(_.getOrElse(Map.empty)).all(filter).value.reduce(_ ++ _)
-      .flatMap {
-        case (_, endpoint) =>
-          endpoint.services.map { uri =>
-            if (uri.getHost != null) uri.getPort else uri.getAuthority.drop(1).toInt
-          }.collect {
-            case port if port >= 0 => port
-          }
-      }.toSet
+    val bundlePorts = (BundleKeys.endpoints in Bundle).?.map(_.getOrElse(Map.empty)).all(filter).value
+      .flatten
+      .map(_._2)
+      .toSet
+      .flatMap { endpoint: Endpoint =>
+        endpoint.services.map { uri =>
+          if (uri.getHost != null) uri.getPort else uri.getAuthority.drop(1).toInt
+        }.collect {
+          case port if port >= 0 => port
+        }
+      }
 
     val debugPorts = state.value.get(WithDebugAttrKey).fold(Set.empty[Int])(_ => debugPort.?.all(filter).value.flatten.toSet)
 
