@@ -33,7 +33,10 @@ lazy val backend = (project in file("modules/backend"))
     BundleKeys.memory := 128.MiB,
     BundleKeys.diskSpace := 50.MiB,
     BundleKeys.roles := Set("backend"),
-    BundleKeys.endpoints := Map("backend" -> Endpoint("http", services = Set(URI("http://:2551")))),
+    BundleKeys.endpoints := Map(
+      "frontend" -> Endpoint("http", services = Set(URI("http://:9001"))),
+      "backend" -> Endpoint("http", services = Set(URI("http://:2551")))
+    ),
     SandboxKeys.debugPort := 2999
   )
 
@@ -43,6 +46,7 @@ checkDockerContainers := {
   // cond-0
   val contentCond0 = s"docker port cond-0".!!
   val expectedLinesCond0 = Set(
+    """9001/tcp -> 0.0.0.0:9001""",
     """9004/tcp -> 0.0.0.0:9004""",
     """9005/tcp -> 0.0.0.0:9005""",
     """9006/tcp -> 0.0.0.0:9006""",
