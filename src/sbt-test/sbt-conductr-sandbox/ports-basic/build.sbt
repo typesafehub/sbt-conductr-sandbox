@@ -75,6 +75,6 @@ checkPortsWithDebug := {
 val checkDebugStartCommand = taskKey[Unit]("Check the start-command in bundle.conf. jvm-debug should be part of it.")
 checkDebugStartCommand := {
   val contents = IO.read((target in Bundle).value / "bundle" / "tmp" / "bundle.conf")
-  val expectedContents = """start-command    = ["ports-basic/bin/ports-basic", "-J-Xms67108864", "-J-Xmx67108864", "-jvm-debug", "5432"]""".stripMargin
+  val expectedContents = """start-command    = ["ports-basic/bin/ports-basic", "-jvm-debug", "5432", "-J-Xms67108864", "-J-Xmx67108864"]""".stripMargin
   contents should include(expectedContents)
 }

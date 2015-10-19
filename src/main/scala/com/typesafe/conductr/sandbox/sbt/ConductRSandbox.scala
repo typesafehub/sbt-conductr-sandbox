@@ -1,7 +1,5 @@
 package com.typesafe.conductr.sandbox.sbt
 
-import com.typesafe.conductr.sbt.ConductRPlugin
-import com.typesafe.sbt.bundle.SbtBundle
 import sbt._
 import sbt.Keys._
 import complete.DefaultParsers._
@@ -110,25 +108,24 @@ object ConductRSandbox extends AutoPlugin {
       isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project",
 
       // We redefine the start command here given that we want it to pick up debug options automatically
-      // when debug is required. The logic below takes care of inserting the debug option and also removing
-      // it when no longer required.
-      BundleKeys.startCommand in Bundle :=
-        Project.extract(state.value).getOpt(BundleKeys.executableScriptPath in Bundle).fold(Seq.empty[String]) {
-          Seq(_) ++
-            (if ((useDebugPort in Global).value) {
-              val existingJavaOptions = (javaOptions in Bundle).value
-              val jvmDebugOptionIdx = existingJavaOptions.indexWhere(_ == "-jvm-debug")
-              val cleanJavaOptions = if (jvmDebugOptionIdx > -1) {
-                val (o0, o1) = existingJavaOptions.splitAt(jvmDebugOptionIdx)
-                o0 ++ o1.drop(2)
-              } else {
-                existingJavaOptions
-              }
-              cleanJavaOptions ++ Seq("-jvm-debug", SandboxKeys.debugPort.value.toString)
-            } else {
-              (javaOptions in Bundle).value
-            })
-        }
+      // when debug is required. The logic below takes care of inserting the debug option. Note that we
+      // use the dependent executableScriptPath setting in order to detect whether a startCommand has been declared
+      // for the current project i.e. we have to test a setting and not try to run a task (startCommand is a task).
+      // If we run the startCommand task then we'll just get recursion here.
+      BundleKeys.startCommand in Bundle := Def.taskDyn {
+        if (Project.extract(state.value).getOpt(BundleKeys.executableScriptPath in (thisProjectRef.value, Bundle)).isDefined) {
+          Def.task[Seq[String]] {
+            val startCommand = (BundleKeys.startCommand in Bundle).value
+            val jvmDebugOptions =
+              if ((useDebugPort in Global).value)
+                Seq("-jvm-debug", SandboxKeys.debugPort.value.toString)
+              else
+                Seq.empty
+            startCommand.headOption.toList ++ jvmDebugOptions ++ startCommand.tail
+          }
+        } else
+          Def.task(Seq.empty[String])
+      }.value
     )
 
   /**
