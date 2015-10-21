@@ -219,7 +219,11 @@ object ConductRSandbox extends AutoPlugin {
   }
 
   private def resolveDockerHostIp(): String =
-    Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse("hostname".!!.trim)
+    Try("docker-machine ip default".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
+      Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
+        "hostname".!!.trim
+      }
+    }
 
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
   private def runConductRsTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {

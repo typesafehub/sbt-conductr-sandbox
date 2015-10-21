@@ -6,13 +6,36 @@
 
 sbt-conductr-sandbox aims to support the running of a Docker-based ConductR cluster in the context of a build. The cluster can then be used to assist you in order to verify that endpoint declarations and other aspects of a bundle configuration are correct. The general idea is that this plugin will also support you when building your project on CI so that you may automatically verify that it runs on ConductR.
 
+## Prerequisites
+- [Docker](https://www.docker.com/)
+
 ## Usage
 
-The single node version of the ConductR Developer Sandbox is available gratis with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for the current image version and licensing information. Use of the ConductR in multi-node mode or for production purposes requires the purchase of Typesafe ConductR. You <strong>must</strong> specify the current imageVersion which you can obtain from the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page.
+The single node version of the ConductR Developer Sandbox is available gratis with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for the current image version and licensing information. Use of the ConductR in multi-node mode or for production purposes requires the purchase of Typesafe ConductR. You <strong>must</strong> specify the current `imageVersion which you can obtain from the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page.
 
-If you have not done so already, then please [install Docker](https://www.docker.com/).
+### Docker
 
-Declare the plugin (typically in a `plugins.sbt`):
+To get started quickly, sbt-conductr-sandbox is using a pre-packaged Docker image which has ConductR already installed. In order to use sbt-conductr-sandbox please install [Docker](https://www.docker.com/) with the `docker-machine` CLI.
+
+Verify the installation by entering the following command into the terminal:
+
+```bash
+$ docker-machine
+Usage: docker-machine [OPTIONS] COMMAND [arg...]
+...
+```
+
+Afterwards, start the Docker VM with:
+
+```bash
+docker-machine start default
+```
+
+This plugin uses the the VirtualBox VM `default` which is the one Docker uses by default.
+
+### Configuring ConductR sandbox
+
+Declare the sbt-conductr-sandbox plugin in the `plugins.sbt` of your project:
 
 ```scala
 addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.1.2")
@@ -22,7 +45,7 @@ Nothing more is required to enable the plugin.
 
 ### Starting ConductR sandbox
 
-To run the sandbox environment use the following command:
+To run the sandbox environment use the following command in the sbt session:
 
 ```scala
 sandbox run
@@ -55,7 +78,7 @@ It is possible to debug your application inside of the ConductR sandbox:
     ```scala
     sandbox debug
     ```
-2. This exposes a debug port to docker and the ConductR container. By default the debug port is set to `5005` which is the default port for remote debugging in IDEs such as IntelliJ. If you are happy with the default setting skip this step. Otherwise specify another port in the `build.sbt`:
+2. This exposes a debug port to Docker and the ConductR container. By default the debug port is set to `5005` which is the default port for remote debugging in IDEs such as IntelliJ. If you are happy with the default setting skip this step. Otherwise specify another port in the `build.sbt`:
 
     ```scala
     SandboxKeys.debugPort := 5432
@@ -79,11 +102,11 @@ sandbox stop
 
 ## Features
 
-> In order to use the following features then you should ensure that the machine that runs Docker has enough memory, typically at least 2GB. VM configurations such as those provided via `boot2docker` and Oracle's VirtualBox can be configured like so:
+> In order to use the following features you should ensure that the machine that runs Docker has enough memory, typically at least 2GB. VM configurations such as those provided via `docker-machine` and Oracle's VirtualBox can be configured like so:
 > ```
-> boot2docker down
-> VBoxManage modifyvm boot2docker-vm --memory 2048
-> boot2docker up
+> docker-machine stop default
+> VBoxManage modifyvm default --memory 2048
+> docker-machine start default
 > ```
 
 ConductR provides additional features which can be optionally enabled:
