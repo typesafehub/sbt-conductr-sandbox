@@ -5,7 +5,6 @@ import sbt._
 import sbt.Keys._
 import complete.DefaultParsers._
 import sbt.complete.{ FixedSetExamples, Parser }
-import scala.util.Try
 
 object Import {
 
@@ -129,6 +128,7 @@ object ConductRSandbox extends AutoPlugin {
    * Run the ConductRs
    */
   def runConductRs(
+    conductrHostIp: String,
     nrOfContainers: Int,
     conductrRoles: Seq[Set[String]],
     allPorts: Set[Int],
@@ -139,7 +139,6 @@ object ConductRSandbox extends AutoPlugin {
     log: ProcessLogger,
     logLevel: String): Unit = {
 
-    val dockerHostIp = resolveDockerHostIp()
     val runningContainers = resolveRunningDockerContainers()
 
     def startNodes(): Unit = {
@@ -148,7 +147,7 @@ object ConductRSandbox extends AutoPlugin {
         val containerName = s"$ConductrNamePrefix$i"
         val containerId = s"docker ps --quiet --filter name=$containerName".!!
         if (containerId.isEmpty) {
-          val portsDesc = allPorts.map(port => s"$dockerHostIp:${portMapping(i, port)}").mkString(", ")
+          val portsDesc = allPorts.map(port => s"$conductrHostIp:${portMapping(i, port)}").mkString(", ")
           // Display the ports on the command line. Only if the user specifies a certain feature, then
           // the corresponding port will be displayed when running 'sandbox run' or 'sandbox debug'
           log.info(s"Starting container $containerName exposing $portsDesc...")
@@ -231,10 +230,6 @@ object ConductRSandbox extends AutoPlugin {
 
   private final val ConductrNamePrefix = "cond-"
 
-  private final val ConductrPort = 9005
-
-  private final val ConductrSandboxControlServerUrl = new sbt.URL(s"http://${resolveDockerHostIp()}:$ConductrPort")
-
   private final val WithDebugAttrKey = AttributeKey[Unit]("conductr-sandbox-with-debug")
 
   private final val WithFeaturesAttrKey = AttributeKey[Set[Feature]]("conductr-sandbox-with-features")
@@ -250,13 +245,6 @@ object ConductRSandbox extends AutoPlugin {
     val portStrRev = port.toString.reverse
     (portStrRev.take(1) + instance.toString + portStrRev.drop(2)).reverse
   }
-
-  private def resolveDockerHostIp(): String =
-    Try("docker-machine ip default".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
-      Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
-        "hostname".!!.trim
-      }
-    }
 
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
   private def runConductRsTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
@@ -306,6 +294,7 @@ object ConductRSandbox extends AutoPlugin {
     }
 
     runConductRs(
+      (ConductRKeys.conductrControlServerUrl in Global).value.getHost,
       nrOfContainers,
       roles,
       bundlePorts ++ featurePorts ++ debugPorts ++ (ports in Global).value,
@@ -413,7 +402,6 @@ object ConductRSandbox extends AutoPlugin {
 
     // Create and append new settings
     val newSettings = Seq(
-      ConductRKeys.conductrControlServerUrl in Global := ConductrSandboxControlServerUrl,
       useDebugPort in Global := debugMode
     )
     extracted.append(newSettings, state3)
