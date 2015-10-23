@@ -59,10 +59,10 @@ If the `sbt-conductr` plugin is enabled for your project then the `conduct info`
 
 #### Starting with ConductR features
 
-To enable optional ConductR features for your sandbox specify the `--withFeatures` option during startup, e.g.:
+To enable optional ConductR features for your sandbox specify the `--with-features` option during startup, e.g.:
     
 ```scala
-[my-app] sandbox run --withFeatures visualization logging
+[my-app] sandbox run --with-features visualization logging
 [info] Running ConductR...
 [info] Running container cond-0 exposing 192.168.59.103:9000 192.168.59.103:9909...
 ```
