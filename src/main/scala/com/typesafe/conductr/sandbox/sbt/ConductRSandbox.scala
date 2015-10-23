@@ -304,7 +304,7 @@ object ConductRSandbox extends AutoPlugin {
     val conductrRolesEnv = toMap("CONDUCTR_ROLES", conductrRoles)(_.mkString(","))
     val envsArgs = (envsValue ++ logLevelEnv ++ syslogEnv ++ conductrFeatureArgs ++ conductrRolesEnv).flatMap { case (k, v) => Seq("-e", s"$k=$v") }.toSeq
 
-    // Expose always the feature related ports even if the are not specified with `--withFeatures`.
+    // Expose always the feature related ports even if the are not specified with `--with-features`.
     // Therefor these ports are also exposed if only the `runConductRs` tasks is executed (e.g. in testing)
     val conductrPorts = Set(
       5601, // conductr-kibana bundle
@@ -406,7 +406,7 @@ object ConductRSandbox extends AutoPlugin {
       (token("debug") ~> OptSpace ~> withFeatures.?) map { case features => DebugSubtask(features.toSet.flatten) }
     def stopSubtask: Parser[StopSubtask.type] = token("stop") map { case _ => StopSubtask }
 
-    def withFeatures: Parser[Set[String]] = "--withFeatures" ~> Space ~> features
+    def withFeatures: Parser[Set[String]] = "--with-features" ~> Space ~> features
     def features: Parser[Set[String]] =
       repeatDep((remainingFeatures: Seq[String]) =>
         StringBasic.examples(FixedSetExamples(ConductrFeatures diff remainingFeatures.toSet), 1, removeInvalidExamples = true), Space).map(_.toSet)

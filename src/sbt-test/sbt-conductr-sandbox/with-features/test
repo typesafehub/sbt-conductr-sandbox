@@ -1,4 +1,4 @@
-> sandbox run --withFeatures visualization logging
+> sandbox run --with-features visualization logging
 
 > checkPorts
 
