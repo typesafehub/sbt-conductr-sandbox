@@ -1,5 +1,6 @@
 package com.typesafe.conductr.sandbox.sbt
 
+import com.typesafe.conductr.sbt.ConductRPlugin
 import sbt._
 import sbt.Keys._
 import complete.DefaultParsers._
@@ -76,6 +77,8 @@ object ConductRSandbox extends AutoPlugin {
   val autoImport = Import
 
   override def trigger = allRequirements
+
+  override def requires = ConductRPlugin
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ Seq(

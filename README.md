@@ -20,7 +20,7 @@ To get started quickly, sbt-conductr-sandbox is using a pre-packaged Docker imag
 Verify the installation by entering the following command into the terminal:
 
 ```bash
-$ docker-machine
+docker-machine
 Usage: docker-machine [OPTIONS] COMMAND [arg...]
 ...
 ```
@@ -45,7 +45,7 @@ Nothing more is required to enable the plugin.
 
 ### Starting ConductR sandbox
 
-To run the sandbox environment use the following command in the sbt session:
+To run the sandbox environment run the following command inside the sbt session:
 
 ```scala
 sandbox run
@@ -55,7 +55,7 @@ sandbox run
 
 Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the image from the public Docker registry).
 
-If the `sbt-conductr` plugin is enabled for your project then the `conduct info` and other `conduct` commands will automatically communicate with the Docker cluster managed by the sandbox.
+This plugin automatically enables `sbt-conductr` for your project so you can use the `conduct info` and other `conduct` commands. These commands will automatically communicate with the Docker cluster managed by the sandbox.
 
 #### Starting with ConductR features
 
@@ -83,7 +83,7 @@ It is possible to debug your application inside of the ConductR sandbox:
     ```scala
     SandboxKeys.debugPort := 5432
     ```    
-4. Load and run your bundle to the sandbox, e.g. by using [sbt-conductr](https://github.com/sbt/sbt-conductr):
+4. Load and run your bundle to the sandbox:
 
     ```scala
     conduct load <HIT THE TAB KEY AND THEN RETURN>
@@ -114,7 +114,7 @@ ConductR provides additional features which can be optionally enabled:
 Name          | CondutR ports | Docker ports | Description
 --------------|---------------|-------------|------------
 visualization | 9999          | 9909        | Provides a web interface to visualize the ConductR cluster together with deployed and running bundles.  After enabling the feature, access it at http://{docker-host-ip}:9909.
-logging       | 9200, 5601    | 9200, 5601  | Consolidates the logging output of ConductR itself and the bundles that it executes. To view the consolidated log messsages access http://{docker-host-ip}:5601 or enable [sbt-conductr](https://github.com/sbt/sbt-conductr) and then `conduct logs {bundle-name}`.
+logging       | 9200, 5601    | 9200, 5601  | Consolidates the logging output of ConductR itself and the bundles that it executes. To view the consolidated log messsages run `conduct logs {bundle-name} or access the Kibana UI at http://{docker-host-ip}:5601.
 
 ## Docker Container Naming
 
