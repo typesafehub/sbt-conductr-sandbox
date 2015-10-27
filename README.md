@@ -7,7 +7,7 @@
 sbt-conductr-sandbox aims to support the running of a Docker-based ConductR cluster in the context of a build. The cluster can then be used to assist you in order to verify that endpoint declarations and other aspects of a bundle configuration are correct. The general idea is that this plugin will also support you when building your project on CI so that you may automatically verify that it runs on ConductR.
 
 ## Prerequisites
-- [Docker](https://www.docker.com/)
+- [Docker 1.8.x or above](https://www.docker.com/)
 
 ## Usage
 
@@ -57,12 +57,44 @@ Given the above you will then have a ConductR process running in the background 
 
 This plugin automatically enables `sbt-conductr` for your project so you can use the `conduct info` and other `conduct` commands. These commands will automatically communicate with the Docker cluster managed by the sandbox.
 
+#### Starting multiple ConductR nodes
+
+By default `sandbox run` is starting a ConductR cluster with one node. Specify the option `--nr-of-containers` to during startup to set the number of nodes in the ConductR cluster:
+ 
+```scala
+sandbox run --nr-of-containers 3
+```
+
+> The single node version of the ConductR Docker image ignores this option and will always start a ConductR cluster with only one node.
+
+#### Adding / stopping ConductR nodes
+
+To add or stop nodes in the ConductR cluster use the `sandbox run`. First, let's start a new ConductR cluster with two nodes:
+
+```
+sandbox run --nr-of-containers 2
+```
+
+Now, let's start one additional node:
+ 
+```
+sandbox run --nr-of-containers 3
+```
+
+The first two nodes have been untouched and one additional node has been started. Finally, let's stop two nodes:
+
+```
+sandbox run --nr-of-containers 1
+```
+
+The last two nodes have been stopped in our cluster, i.e. `cond-2` and `cond-1` have been stopped while `cond-0` is still running.
+
 #### Starting with ConductR features
 
 To enable optional ConductR features for your sandbox specify the `--with-features` option during startup, e.g.:
     
 ```scala
-[my-app] sandbox run --with-features visualization logging
+sandbox run --with-features visualization logging
 [info] Running ConductR...
 [info] Running container cond-0 exposing 192.168.59.103:9000 192.168.59.103:9909...
 ```
@@ -134,18 +166,20 @@ Your application defines these settings in the `build.sbt`:
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 
 BundleKeys.endpoints := Map("sample-app" -> Endpoint("http", services = Set(uri("http://:9000"))))
-SandboxKeys.image in Global := "conductr/conductr"
-SandboxKeys.imageVersion in Global := "latest"
-SandboxKeys.nrOfContainers in Global := 3
+SandboxKeys.imageVersion in Global := "1.0.11"
 SandboxKeys.ports in Global := Set(1111)
 SandboxKeys.debugPort := 5095
+``` 
+
+We specify that the web application should serve traffic on port 9000. Additionally we expose port 1111. The debug port gets only mapped if we start the ConductR sandbox cluster in debug mode with `sandbox debug`.
+
+Now we create a ConductR cluster with 3 nodes:
+
+```
+sandbox run --nr-of-containers 3
 ```
 
-In this case we want to create a ConductR sandbox cluster with 3 nodes. 
-
-> Note that a cluster with more than one node is only possible with the full version of ConductR. If `SandboxKeys.image` is not overridden the single node version will be used. 
-
-We also specify that the web application should serve traffic on port 9000. Additionally we expose port 1111. The debug port gets only mapped if we start the ConductR sandbox cluster in debug mode with `sandbox debug`.
+> Note that a cluster with more than one node is only possible with the full version of ConductR. If `SandboxKeys.image` is not overridden the single node version will be used.
 
 These settings result in the following port mapping:
 
@@ -180,17 +214,19 @@ SandboxKeys.conductrRoles in Global := Seq(Set("muchMem", "myDB"))
 This is only adding the roles `muchMem` and `myDB` to all ConductR nodes. The bundle roles are ignored in case `SandboxKeys.conductrRoles` is specified. Assigning different roles to nodes is also possible by specifying a set for each of the nodes:
 
 ```scala
-SandboxKeys.nrOfContainers in Global := 2
 SandboxKeys.conductrRoles in Global := Seq(Set("muchMem"), Set("myDB"))
 ```
 
-In this example bundles with the role `muchMem` would only be loaded and scaled to the first node and bundles with the role `myDB` only to the second node.
+In the above example the bundles with the role `muchMem` would only be loaded and scaled to the first node and bundles with the role `myDB` only to the second node.
 
-If `nrOfContainers` is larger than the size of the `conductrRoles` sequence then the specified roles are subsequently applied to the remaining nodes.
+If the `--nr-of-containers` startup option is larger than the size of the `conductrRoles` sequence then the specified roles are subsequently applied to the remaining nodes.
 
 ```scala
-SandboxKeys.nrOfContainers in Global := 4
 SandboxKeys.conductrRoles in Global := Seq(Set("muchMem", "frontend"), Set("myDB"))
+```
+
+```scala
+sandbox run --nr-of-containers 4
 ```
 
 This would load and scale all bundles with the roles `muchMem` and `frontend` to the first and third node and bundles with the role `myDB` to the second and fourth node.
@@ -231,7 +267,6 @@ imageVersion      | Global  | The version of the Docker image to use. Must be se
 ports             | Global  | A `Seq[Int]` of ports to be made public by each of the ConductR containers. This will be complemented to the `endpoints` setting's service ports declared for `sbt-bundle`.
 debugPort         | Project | Debug port to be made public to the ConductR containers if the sandbox gets started in [debug mode](#Commands). The debug ports of each sbt project setting will be used. If `sbt-bundle` is enabled the JVM argument `-jvm-debug $debugPort` is  additionally added to the `startCommand` of `sbt-bundle`. Default is 5005.
 logLevel          | Global  | The log level of ConductR which can be one of "debug", "warning" or "info". By default this is set to "info". You can observe ConductR's logging via the `docker logs` command. For example `docker logs -f cond-0` will follow the logs of the first ConductR container.
-nrOfContainers    | Global  | Sets the number of ConductR containers to run in the background. By default 1 is run. Note that by default you may only have more than one if the image being used is *not* conductr/conductr-dev (the default, single node version of ConductR for general development).
 conductrRoles     | Global  | Sets additional roles to the ConductR nodes. Defaults to `Seq.empty`. If this settings is not set the bundle roles specified with `BundleKeys.roles` are used. To provide a custom role configuration specify a set of roles for each node. Example: Seq(Set("megaIOPS"), Set("muchMem", "myDB")) would add the role `megaIOPS` to first ConductR node. `muchMem` and `myDB` would be added to the second node. If `nrOfContainers` is larger than the size of the `conductrRoles` sequence then the specified roles are subsequently applied to the remaining nodes.
 
 ## Commands
