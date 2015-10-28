@@ -274,7 +274,13 @@ object ConductRSandbox extends AutoPlugin {
       s"docker pull $ConductRDevImage:$conductrImageVersion".!(streams.value.log)
     }
 
-    val nrOfContainers = state.value.get(NrOfContainersAttrKey).getOrElse(DefaultNrOfContainers)
+    val nrOfContainers = state.value.get(NrOfContainersAttrKey) match {
+      case None => DefaultNrOfContainers
+      case Some(nrOfContainers) if conductrImage == ConductRDevImage && nrOfContainers > DefaultNrOfContainers =>
+        streams.value.log.warn("Only a single node can be used in the development version of ConductR. Setting --nr-of-containers to 1.")
+        DefaultNrOfContainers
+      case Some(nrOfContainers) => nrOfContainers
+    }
 
     val features = state.value.get(WithFeaturesAttrKey).toSet.flatten
 
