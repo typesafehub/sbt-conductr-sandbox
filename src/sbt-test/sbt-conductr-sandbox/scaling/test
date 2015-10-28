@@ -2,14 +2,6 @@
 
 > checkContainers1
 
-> sandbox run --nr-of-containers 3
-
-> checkContainers3
-
-> sandbox run --nr-of-containers 2
-
-> checkContainers2
-
 > sandbox stop
 
 > checkContainers0
