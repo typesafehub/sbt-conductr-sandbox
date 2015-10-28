@@ -1,4 +1,4 @@
-> sandbox run
+> sandbox run --nr-of-containers 3
 
 > checkPortsWithRun
 
@@ -8,7 +8,9 @@
 
 > clean
 
-> sandbox debug
+> sandbox stop
+
+> sandbox debug --nr-of-containers 3
 
 > checkPortsWithDebug
 

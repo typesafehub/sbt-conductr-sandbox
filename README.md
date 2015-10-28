@@ -11,11 +11,11 @@ sbt-conductr-sandbox aims to support the running of a Docker-based ConductR clus
 
 ## Usage
 
-The single node version of the ConductR Developer Sandbox is available gratis with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for the current image version and licensing information. Use of the ConductR in multi-node mode or for production purposes requires the purchase of Typesafe ConductR. You <strong>must</strong> specify the current `imageVersion which you can obtain from the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page.
+The version of the ConductR Developer Sandbox is available gratis during development with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for the current image version and licensing information. Use of ConductR for production purposes requires the purchase of Typesafe ConductR. You <strong>must</strong> specify the current `imageVersion which you can obtain from the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page.
 
 ### Docker
 
-To get started quickly, sbt-conductr-sandbox is using a pre-packaged Docker image which has ConductR already installed. In order to use sbt-conductr-sandbox please install [Docker](https://www.docker.com/) with the `docker-machine` CLI.
+To get started quickly, sbt-conductr-sandbox is using a pre-packaged Docker image which has ConductR already installed. In order to use sbt-conductr-sandbox please install [Docker](https://www.docker.com/) and the `docker-machine` CLI.
 
 Verify the installation by entering the following command into the terminal:
 
@@ -64,8 +64,6 @@ By default `sandbox run` is starting a ConductR cluster with one node. Specify t
 ```scala
 sandbox run --nr-of-containers 3
 ```
-
-> The single node version of the ConductR Docker image ignores this option and will always start a ConductR cluster with only one node.
 
 #### Adding / stopping ConductR nodes
 
@@ -166,7 +164,7 @@ Your application defines these settings in the `build.sbt`:
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 
 BundleKeys.endpoints := Map("sample-app" -> Endpoint("http", services = Set(uri("http://:9000"))))
-SandboxKeys.imageVersion in Global := "1.0.11"
+SandboxKeys.imageVersion in Global := "1.0.12"
 SandboxKeys.ports in Global := Set(1111)
 SandboxKeys.debugPort := 5095
 ``` 
@@ -178,8 +176,6 @@ Now we create a ConductR cluster with 3 nodes:
 ```
 sandbox run --nr-of-containers 3
 ```
-
-> Note that a cluster with more than one node is only possible with the full version of ConductR. If `SandboxKeys.image` is not overridden the single node version will be used.
 
 These settings result in the following port mapping:
 
@@ -251,6 +247,7 @@ testOptions in IntegrationTest ++= Seq(
     ConductRSandbox.stopConductRs(streams.value.log)
     ConductRSandbox.runConductRs(
       1,
+      Seq.empty,
       Set.empty,
       Map.empty,
       (conductrImage in Global).value,

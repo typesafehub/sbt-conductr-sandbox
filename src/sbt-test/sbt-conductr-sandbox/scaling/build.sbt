@@ -5,25 +5,13 @@ name := "scaling"
 
 version := "0.1.0-SNAPSHOT"
 
-// FIXME: Once the docker image with the full ConductR version is available this test should
-//        execute the following steps in the test file:
-//        > sandbox run
-//        > checkContainers1
-//        > sandbox run --nr-of-containers 3
-//        > checkContainers3
-//        > sandbox run --nr-of-containers 2
-//        > checkContainers2
-//        > sandbox stop
-//        > checkContainers0
-
-
 // ConductR bundle keys
 BundleKeys.nrOfCpus := 1.0
 BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
 // ConductR sandbox keys
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.11")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.12")
 
 def resolveRunningContainers = """docker ps --quiet --filter name=cond""".lines_!
 

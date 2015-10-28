@@ -13,8 +13,8 @@ BundleKeys.roles := Set("bundle-role-1", "bundle-role-2")
 BundleKeys.startCommand := Seq("-Xms1G")
 
 BundleKeys.configurationName := "frontend"
-
+BundleKeys.endpoints := Map("other" -> Endpoint("http", services = Set(URI("http://:9001/other-service"))))
 SandboxKeys.ports in Global := Set(9999)
-SandboxKeys.imageVersion in Global := "1.0.11"
+SandboxKeys.imageVersion in Global := "1.0.12"
 
 SandboxKeys.debugPort := 5432

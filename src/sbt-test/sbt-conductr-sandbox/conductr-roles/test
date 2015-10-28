@@ -1,12 +1,12 @@
-> sandbox run
+> sandbox run --nr-of-containers 3
 
 > checkConductrRolesByBundle
 
 > sandbox stop
 
-> 'set SandboxKeys.conductrRoles in Global := Seq(Set("conductr-role-1", "conductr-role-2"), Set("conductr-role-1"))'
+> 'set SandboxKeys.conductrRoles in Global := Seq(Set("new-role"), Set("other-role"))'
 
-> sandbox run
+> sandbox run --nr-of-containers 4
 
 > checkConductrRolesBySandboxKey
 
