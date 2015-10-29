@@ -188,17 +188,27 @@ Docker container | ConductR port | Docker internal port | Docker public port
 cond-0           | 9000          | 9000                 | 9000
 cond-1           | 9000          | 9000                 | 9010
 cond-2           | 9000          | 9000                 | 9020
-cond-0           | 1111          | 1111                 | 1101
-cond-1           | 1111          | 1111                 | 1111
-cond-2           | 1111          | 1111                 | 1121
-cond-0           | 5095          | 5095                 | 5005
-cond-1           | 5095          | 5095                 | 5015
-cond-2           | 5095          | 5095                 | 5025
+cond-0           | 1111          | 1111                 | 1111
+cond-1           | 1111          | 1111                 | 1121
+cond-2           | 1111          | 1111                 | 1131
+cond-0           | 5095          | 5095                 | 5095
+cond-1           | 5095          | 5095                 | 5005
+cond-2           | 5095          | 5095                 | 5015
 
-Each specified port is mapped to a unique public Docker port in order to allow multiple nodes within the sandbox cluster. By convention, the port is mapped for the first Docker container to XX0X, the second will be XX1X, the third will be XX2X. 
-The web application becomes available on the IP addresses of the Docker containers that host each ConductR process. The sandbox cluster is configured with a proxy and will automatically route requests to the correct instances that you have running in the cluster. Therefore any one of the addresses with the 9000, 9010 or 9020 ports will reach your application.
+Each specified port is mapped to a unique public Docker port in order to allow multiple nodes within the sandbox cluster. By convention, the first node is using the ConductR port as the public Docker port, e.g. 1111 becomes 1111. The following nodes using a different public Docker port by increasing the second last digit of the ConductR port by the node number, e.g. the second node is mapping the port 1111 to 1121, the third is mapping the port 1111 to 1131. 
+The web application becomes available on the Docker host IP address. The sandbox cluster is configured with a proxy and will automatically route requests to the correct instances that you have running in the cluster. Therefore any one of the addresses with the 9000, 9010 or 9020 ports will reach your application.
 
-As a convenience, `sandbox run` and `sandbox debug` reports each of the above mappings along with IP addresses.
+As a convenience, `sandbox run` and `sandbox debug` is reporting each of the above mappings along with the IP addresses:
+
+```
+[info] Starting ConductR nodes..
+[info] Starting container cond-0 exposing 192.168.99.100:9000, 192.168.99.100:1111, 192.168.99.100:5095...
+[info] f7f030f8b97cc375642f5a0321654594547b1e7d3a327c6f120715ba3199dda0
+[info] Starting container cond-1 exposing 192.168.99.100:9010, 192.168.99.100:1121, 192.168.99.100:5005...
+[info] 7f2caf1053810465589ac9710e0676a39d6828687c06020fa2d4a80ba815d80a
+[info] Starting container cond-2 exposing 192.168.99.100:9020, 192.168.99.100:1131, 192.168.99.100:5015...
+[info] 5644465b394617fb8d18bdb64ce488257776eea4437d7d1d205b481b775ab42a
+```
 
 ## Roles
 
