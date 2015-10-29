@@ -241,9 +241,11 @@ object ConductRSandbox extends AutoPlugin {
   private def inspectCond0Ip(): String =
     s"""docker inspect --format="{{.NetworkSettings.IPAddress}}" ${ConductrNamePrefix}0""".!!.trim
 
-  private def portMapping(instance: Int, port: Int): String = {
+  def portMapping(instance: Int, port: Int): String = {
     val portStrRev = port.toString.reverse
-    (portStrRev.take(1) + instance.toString + portStrRev.drop(2)).reverse
+    val currentSecondLastNr = portStrRev.drop(1).take(1).toInt
+    val newSecondLastNr = if(instance == 0) currentSecondLastNr else (currentSecondLastNr + instance) % 10
+    (portStrRev.take(1) + newSecondLastNr + portStrRev.drop(2)).reverse
   }
 
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
