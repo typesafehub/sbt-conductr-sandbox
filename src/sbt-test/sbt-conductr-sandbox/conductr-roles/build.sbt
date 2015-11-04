@@ -17,18 +17,24 @@ BundleKeys.diskSpace := 10.MB
 BundleKeys.roles := Set("bundle-role-1", "bundle-role-2")
 
 // ConductR sandbox keys
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.11")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.12")
 
 val checkConductrRolesByBundle = taskKey[Unit]("Check that the bundle roles are used if no SandboxKeys.conductrRoles is specified.")
 checkConductrRolesByBundle := {
-  val content = "docker inspect --format='{{.Config.Env}}' cond-0".!!
-  val expectedContent = "CONDUCTR_ROLES=bundle-role-1,bundle-role-2"
-  content should include(expectedContent)
+  for (i <- 0 to 2) {
+    val content = s"docker inspect --format='{{.Config.Env}}' cond-$i".!!
+    val expectedContent = "CONDUCTR_ROLES=bundle-role-1,bundle-role-2"
+    content should include(expectedContent)
+  }
 }
 
 val checkConductrRolesBySandboxKey = taskKey[Unit]("Check that the roles declared by SandboxKeys.conductrRoles are used.")
 checkConductrRolesBySandboxKey := {
-  val content = "docker inspect --format='{{.Config.Env}}' cond-0".!!
-  val expectedContent = "CONDUCTR_ROLES=conductr-role-1,conductr-role-2"
-  content should include(expectedContent)
+  for (i <- 0 to 3) {
+    val content = s"docker inspect --format='{{.Config.Env}}' cond-$i".!!
+    val expectedContent =
+      if(i % 2 == 0) "CONDUCTR_ROLES=new-role"
+      else           "CONDUCTR_ROLES=other-role"
+    content should include(expectedContent)
+  }
 }

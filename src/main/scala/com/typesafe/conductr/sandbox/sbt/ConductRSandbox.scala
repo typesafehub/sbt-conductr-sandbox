@@ -17,7 +17,7 @@ object Import {
 
     val image = SettingKey[String](
       "conductr-sandbox-image",
-      "The Docker image to use. By default `typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr-dev` is used i.e. the single node version of ConductR. For the full version please [download it via our website](http://www.typesafe.com/products/conductr) and then use just `typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr`."
+      "The Docker image to use. By default `typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr` is used."
     )
 
     val imageVersion = SettingKey[String](
@@ -77,7 +77,7 @@ object ConductRSandbox extends AutoPlugin {
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ Seq(
       envs := Map.empty,
-      image := ConductRDevImage,
+      image := ConductRImage,
       ports := Set.empty,
       logLevel := "info",
       conductrRoles := Seq.empty,
@@ -220,9 +220,9 @@ object ConductRSandbox extends AutoPlugin {
   private def removeDockerContainers(containers: Seq[String], log: ProcessLogger): Unit =
     s"docker rm -f ${containers.mkString(" ")}".!(log)
 
-  private final val ConductRDevImage = "typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr-dev"
+  private final val ConductRImage = "typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr"
 
-  private final val LatestConductRVersion = "1.0.11"
+  private final val LatestConductRVersion = "1.0.12"
 
   private final val DefaultNrOfContainers = 1
 
@@ -259,18 +259,12 @@ object ConductRSandbox extends AutoPlugin {
         ""
     }
 
-    if (conductrImage == ConductRDevImage && s"docker images -q $ConductRDevImage".!!.isEmpty) {
-      streams.value.log.info("Pulling down the development version of ConductR * * * SINGLE NODED AND NOT FOR PRODUCTION USAGE * * *")
-      s"docker pull $ConductRDevImage:$conductrImageVersion".!(streams.value.log)
+    if (conductrImage == ConductRImage && s"docker images -q $ConductRImage".!!.isEmpty) {
+      streams.value.log.info("Pulling down the ConductR development image..")
+      s"docker pull $ConductRImage:$conductrImageVersion".!(streams.value.log)
     }
 
-    val nrOfContainers = state.value.get(NrOfContainersAttrKey) match {
-      case None => DefaultNrOfContainers
-      case Some(nrOfContainers) if conductrImage == ConductRDevImage && nrOfContainers > DefaultNrOfContainers =>
-        streams.value.log.warn("Only a single node can be used in the development version of ConductR. Setting --nr-of-containers to 1.")
-        DefaultNrOfContainers
-      case Some(nrOfContainers) => nrOfContainers
-    }
+    val nrOfContainers = state.value.get(NrOfContainersAttrKey).getOrElse(DefaultNrOfContainers)
 
     val features = state.value.get(WithFeaturesAttrKey).toSet.flatten
 
