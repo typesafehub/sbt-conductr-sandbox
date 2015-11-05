@@ -38,7 +38,7 @@ This plugin uses the the VirtualBox VM `default` which is the one Docker uses by
 Declare the sbt-conductr-sandbox plugin in the `plugins.sbt` of your project:
 
 ```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.1.2")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.2.1")
 ```
 
 Nothing more is required to enable the plugin.
