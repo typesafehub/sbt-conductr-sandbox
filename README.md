@@ -36,14 +36,6 @@ It is possible to debug your application inside of the ConductR sandbox:
 
 You should be now able to remotely debug the bundle inside the ConductRs sandbox with your favorite IDE.    
 
-### Stopping ConductR sandbox
-
-To stop the sandbox use: 
-
-```scala
-sandbox stop
-```
-
 ## Features
 
 > In order to use the following features you should ensure that the machine that runs Docker has enough memory, typically at least 2GB. VM configurations such as those provided via `docker-machine` and Oracle's VirtualBox can be configured like so:
