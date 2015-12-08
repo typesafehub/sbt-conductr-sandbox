@@ -9,97 +9,11 @@ sbt-conductr-sandbox aims to support the running of a Docker-based ConductR clus
 ## Prerequisites
 - [Docker](https://www.docker.com/)
 
-## Usage
+## General Usage
 
-The version of the ConductR Developer Sandbox is available gratis during development with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for the current image version and licensing information. Use of ConductR for production purposes requires the purchase of Typesafe ConductR. You <strong>must</strong> specify the current `imageVersion which you can obtain from the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page.
+The version of the ConductR Developer Sandbox is available gratis during development with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for usage instructions.
 
-### Docker
-
-To get started quickly, sbt-conductr-sandbox is using a pre-packaged Docker image which has ConductR already installed. In order to use sbt-conductr-sandbox please install [Docker](https://www.docker.com/) and the `docker-machine` CLI.
-
-Verify the installation by entering the following command into the terminal:
-
-```bash
-docker-machine
-Usage: docker-machine [OPTIONS] COMMAND [arg...]
-...
-```
-
-Afterwards, start the Docker VM with:
-
-```bash
-docker-machine start default
-```
-
-This plugin uses the the VirtualBox VM `default` which is the one Docker uses by default.
-
-### Configuring ConductR sandbox
-
-Declare the sbt-conductr-sandbox plugin in the `plugins.sbt` of your project:
-
-```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.2.1")
-```
-
-Nothing more is required to enable the plugin.
-
-### Starting ConductR sandbox
-
-To run the sandbox environment run the following command inside the sbt session:
-
-```scala
-sandbox run
-```
-
-> Note that the ConductR cluster will take a few seconds to become available and so any initial command that you send to it may not work immediately.
-
-Given the above you will then have a ConductR process running in the background (there will be an initial download cost for Docker to download the image from the public Docker registry).
-
-This plugin automatically enables `sbt-conductr` for your project so you can use the `conduct info` and other `conduct` commands. These commands will automatically communicate with the Docker cluster managed by the sandbox.
-
-#### Starting multiple ConductR nodes
-
-By default `sandbox run` is starting a ConductR cluster with one node. Specify the option `--nr-of-containers` to during startup to set the number of nodes in the ConductR cluster:
- 
-```scala
-sandbox run --nr-of-containers 3
-```
-
-#### Adding / stopping ConductR nodes
-
-To add or stop nodes in the ConductR cluster use the `sandbox run`. First, let's start a new ConductR cluster with two nodes:
-
-```
-sandbox run --nr-of-containers 2
-```
-
-Now, let's start one additional node:
- 
-```
-sandbox run --nr-of-containers 3
-```
-
-The first two nodes have been untouched and one additional node has been started. Finally, let's stop two nodes:
-
-```
-sandbox run --nr-of-containers 1
-```
-
-The last two nodes have been stopped in our cluster, i.e. `cond-2` and `cond-1` have been stopped while `cond-0` is still running.
-
-#### Starting with ConductR features
-
-To enable optional ConductR features for your sandbox specify the `--with-features` option during startup, e.g.:
-    
-```scala
-sandbox run --with-features visualization logging
-[info] Running ConductR...
-[info] Running container cond-0 exposing 192.168.59.103:9000 192.168.59.103:9909...
-```
-
-Check out the [Features](#features) section for more information.
-
-### Debugging application in ConductR sandbox
+## Debugging application in ConductR sandbox
 
 It is possible to debug your application inside of the ConductR sandbox:
 
