@@ -67,7 +67,6 @@ Your application defines these settings in the `build.sbt`:
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 
 BundleKeys.endpoints := Map("sample-app" -> Endpoint("http", services = Set(uri("http://:9000"))))
-SandboxKeys.imageVersion in Global := "1.0.12"
 SandboxKeys.ports in Global := Set(1111)
 SandboxKeys.debugPort := 5095
 ``` 
