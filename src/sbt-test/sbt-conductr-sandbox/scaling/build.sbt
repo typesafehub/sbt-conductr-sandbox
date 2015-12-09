@@ -11,7 +11,7 @@ BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
 // ConductR sandbox keys
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.12")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.14")
 
 def resolveRunningContainers = """docker ps --quiet --filter name=cond""".lines_!
 
