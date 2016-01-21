@@ -45,9 +45,10 @@ You should be now able to remotely debug the bundle inside the ConductRs sandbox
 Features are specified with a `--with-features visualization logging` option convention. The following features are available:
 
 Name          | ConductR ports | Docker ports | Description
---------------|----------------|-------------|------------
-visualization | 9999           | 9909        | Provides a web interface to visualize the ConductR cluster together with deployed and running bundles.  After enabling the feature, access it at http://{docker-host-ip}:9909.
-logging       | 9200, 5601     | 9200, 5601  | Consolidates the logging output of ConductR itself and the bundles that it executes. To view the consolidated log messsages run `conduct logs {bundle-name} or access the Kibana UI at http://{docker-host-ip}:5601.
+--------------|----------------|--------------|------------
+logging       | 9200, 5601     | 9200, 5601   | Consolidates the logging output of ConductR itself and the bundles that it executes. To view the consolidated log messsages run `conduct logs {bundle-name} or access the Kibana UI at http://{docker-host-ip}:5601.
+monitoring    | N/A            | N/A          | Enables the Takipi based monitoring via Typesafe monitoring.
+visualization | 9999           | 9909         | Provides a web interface to visualize the ConductR cluster together with deployed and running bundles.  After enabling the feature, access it at http://{docker-host-ip}:9909.
 
 ## Docker Container Naming
 
