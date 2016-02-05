@@ -6,6 +6,8 @@
 
 sbt-conductr-sandbox aims to support the running of a Docker-based ConductR cluster in the context of a build. The cluster can then be used to assist you in order to verify that endpoint declarations and other aspects of a bundle configuration are correct. The general idea is that this plugin will also support you when building your project on CI so that you may automatically verify that it runs on ConductR.
 
+> Note that because the sandbox uses Docker, you cannot run bundles that also use Docker - Docker cannot run within Docker! If you have a Docker bundle then we recommend that you setup a VM for development and follow [the regular installation guide of our docs](http://conductr.typesafe.com/); perhaps just for a single node to make your setup a bit easier.
+
 ## General Usage
 
 The version of the ConductR Developer Sandbox is available gratis during development with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for usage instructions.
