@@ -3,7 +3,7 @@ language: scala
 
 env:
   global:
-    - "HOST_IP=$(/sbin/ifconfig venet0:0 | grep 'inet addr' | awk -F: '{print $2}' | awk '{print $1}')"
+    - "HOST_IP=$(/sbin/ifconfig eth0 | grep 'inet addr' | awk -F: '{print $2}' | awk '{print $1}')"
     - DOCKER_HOST=tcp://$HOST_IP:2375
     - DOCKER_PORT_RANGE=2400:2500
     - SLIRP_PORTS=$(seq 2375 2500)
@@ -13,6 +13,9 @@ before_install:
   - sudo sh -c "apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9"
   - echo exit 101 | sudo tee /usr/sbin/policy-rc.d
   - sudo chmod +x /usr/sbin/policy-rc.d
+  # Hostname need to be set to avoid buffer overlow. Issue: https://github.com/travis-ci/travis-ci/issues/5227
+  - sudo hostname "$(hostname | cut -c1-63)"
+  - sed -e "s/^\\(127\\.0\\.0\\.1.*\\)/\\1 $(hostname | cut -c1-63)/" /etc/hosts | sudo tee /etc/hosts
 
 install:
   - sudo apt-get -qqy update

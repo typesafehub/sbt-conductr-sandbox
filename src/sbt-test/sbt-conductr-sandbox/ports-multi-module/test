@@ -3,3 +3,5 @@
 > checkDockerContainers
 
 > sandbox stop
+
+> checkConductRIsStopped

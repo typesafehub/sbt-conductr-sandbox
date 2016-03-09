@@ -16,11 +16,11 @@ BundleKeys.endpoints := Map("other" -> Endpoint("http", services = Set(URI("http
 // ConductR sandbox keys
 SandboxKeys.ports in Global := Set(1111, 2222)
 SandboxKeys.debugPort := 5432
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.14")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.1.2")
 
 /**
- * Check ports after 'sandbox run' command
- */
+  * Check ports after 'sandbox run' command
+  */
 val checkPortsWithRun = taskKey[Unit]("Check that the specified ports are exposed to docker. Debug port should not be exposed.")
 checkPortsWithRun := {
   for (i <- 0 to 2) {
@@ -68,8 +68,8 @@ checkPortsWithRun := {
 }
 
 /**
- * Check bundle conf after 'sandbox run' and 'bundle:dist'
- */
+  * Check bundle conf after 'sandbox run' and 'bundle:dist'
+  */
 val checkRunStartCommand = taskKey[Unit]("Check the start-command in bundle.conf. jvm-debug should not be part of it.")
 checkRunStartCommand := {
   val contents = IO.read((target in Bundle).value / "bundle"/ "tmp" / "bundle.conf")
@@ -78,8 +78,8 @@ checkRunStartCommand := {
 }
 
 /**
- * Check ports after 'sandbox debug'
- */
+  * Check ports after 'sandbox debug'
+  */
 val checkPortsWithDebug = taskKey[Unit]("Check that the specified ports are exposed to docker. Debug port should be exposed.")
 checkPortsWithDebug := {
   for (i <- 0 to 2) {
@@ -130,11 +130,16 @@ checkPortsWithDebug := {
 }
 
 /**
- * Check bundle conf after 'sandbox debug' and 'bundle:dist'
- */
+  * Check bundle conf after 'sandbox debug' and 'bundle:dist'
+  */
 val checkDebugStartCommand = taskKey[Unit]("Check the start-command in bundle.conf. jvm-debug should be part of it.")
 checkDebugStartCommand := {
   val contents = IO.read((target in Bundle).value / "bundle" / "tmp" / "bundle.conf")
   val expectedContents = """start-command    = ["ports-basic/bin/ports-basic", "-jvm-debug", "5432", "-J-Xms67108864", "-J-Xmx67108864"]""".stripMargin
   contents should include(expectedContents)
+}
+
+val checkConductRIsStopped = taskKey[Unit]("")
+checkConductRIsStopped := {
+  """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }

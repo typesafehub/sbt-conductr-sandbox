@@ -8,9 +8,43 @@ sbt-conductr-sandbox aims to support the running of a Docker-based ConductR clus
 
 > Note that because the sandbox uses Docker, you cannot run bundles that also use Docker - Docker cannot run within Docker! If you have a Docker bundle then we recommend that you setup a VM for development and follow [the regular installation guide of our docs](http://conductr.typesafe.com/); perhaps just for a single node to make your setup a bit easier.
 
-## General Usage
+## Usage
 
-The version of the ConductR Developer Sandbox is available gratis during development with registration at Typesafe.com. Please visit the [ConductR Developer](http://www.typesafe.com/product/conductr/developer) page on Typesafe.com for usage instructions.
+1. Add `sbt-conductr-sandbox` to the `project/plugins.sbt`: 
+
+    ```
+    addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.2.2")
+    ```
+2. Verify that `sbt-bundle` keys have been set. For further information refer to the [sbt-bundle](https://github.com/sbt/sbt-bundle) documentation:
+
+    ```
+    import ByteConversions._
+    BundleKeys.nrOfCpus := 1.0
+    BundleKeys.memory := 64.MiB
+    BundleKeys.diskSpace := 10.MB
+    ```    
+3. Specify the ConductR Developer Sandbox version in the `build.sbt`. This version is available gratis during development with registration at lightbend.com. Please visit the [ConductR Developer](http://www.lightbend.com/product/conductr/developer) page for usage instructions.
+
+    ```
+    SandboxKeys.imageVersion in Global := "YOUR_CONDUCTR_SANDBOX_VERSION"
+    ````
+4. Reload the sbt session:
+
+    ```
+    reload
+    ```    
+       
+The plugin is then enabled automatically for your entire project. Additionally it includes [sbt-conductr](https://github.com/sbt/sbt-conductr) and [sbt-bundle](https://github.com/sbt/sbt-bundle) so these plugins doesn’t need to be added separately. The conduct commands such as conduct info will automatically communicate with the Docker cluster managed by the sandbox. There is no need to set ConductR’s ip address with controlServer manually.
+
+To start the sandbox use the `run` command:
+
+```
+sandbox run
+[info] Running ConductR...
+[info] Running container cond-0 exposing 192.168.59.103:9000...
+```
+
+Checkout the [commands](#Commands) section to see all available sandbox commands.
 
 ## Debugging application in ConductR sandbox
 

@@ -5,3 +5,5 @@
 > checkEnvs
 
 > sandbox stop
+
+> checkConductRIsStopped
