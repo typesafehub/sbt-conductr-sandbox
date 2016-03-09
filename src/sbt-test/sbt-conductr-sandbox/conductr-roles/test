@@ -11,3 +11,5 @@
 > checkConductrRolesBySandboxKey
 
 > sandbox stop
+
+> checkConductRIsStopped

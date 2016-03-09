@@ -17,7 +17,7 @@ BundleKeys.diskSpace := 10.MB
 BundleKeys.roles := Set("bundle-role-1", "bundle-role-2")
 
 // ConductR sandbox keys
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.14")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.1.2")
 
 val checkConductrRolesByBundle = taskKey[Unit]("Check that the bundle roles are used if no SandboxKeys.conductrRoles is specified.")
 checkConductrRolesByBundle := {
@@ -37,4 +37,9 @@ checkConductrRolesBySandboxKey := {
       else           "CONDUCTR_ROLES=other-role"
     content should include(expectedContent)
   }
+}
+
+val checkConductRIsStopped = taskKey[Unit]("")
+checkConductRIsStopped := {
+  """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }

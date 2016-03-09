@@ -6,7 +6,7 @@ version := "0.1.0-SNAPSHOT"
 
 // ConductR global keys
 SandboxKeys.ports in Global := Set(1111, 2222)
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.14")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.1.2")
 
 lazy val common = (project in file("modules/common"))
   .settings(
@@ -41,7 +41,6 @@ lazy val backend = (project in file("modules/backend"))
   )
 
 val checkDockerContainers = taskKey[Unit]("Check that the specified ports are exposed to docker.")
-
 checkDockerContainers := {
   // cond-0
   val contentCond0 = s"docker port cond-0".!!
@@ -60,4 +59,9 @@ checkDockerContainers := {
   )
   expectedLinesCond0.foreach(line => contentCond0 should include(line))
 
+}
+
+val checkConductRIsStopped = taskKey[Unit]("")
+checkConductRIsStopped := {
+  """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }

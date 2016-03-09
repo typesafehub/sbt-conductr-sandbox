@@ -12,7 +12,7 @@ BundleKeys.nrOfCpus := 1.0
 BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
-SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.0.14")
+SandboxKeys.imageVersion in Global := sys.props.getOrElse("IMAGE_VERSION", default = "1.1.2")
 
 /**
  * Check ports after 'sandbox run' command
@@ -33,4 +33,9 @@ checkEnvs := {
   val content = "docker inspect --format='{{.Config.Env}}' cond-0".!!
   val expectedContent = "CONDUCTR_FEATURES=visualization,logging"
   content should include(expectedContent)
+}
+
+val checkConductRIsStopped = taskKey[Unit]("")
+checkConductRIsStopped := {
+  """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }
