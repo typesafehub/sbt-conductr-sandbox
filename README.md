@@ -13,7 +13,7 @@ sbt-conductr-sandbox aims to support the running of a Docker-based ConductR clus
 1. Add `sbt-conductr-sandbox` to the `project/plugins.sbt`: 
 
     ```
-    addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.2.2")
+    addSbtPlugin("com.typesafe.conductr" % "sbt-conductr-sandbox" % "1.3.0")
     ```
 2. Verify that `sbt-bundle` keys have been set. For further information refer to the [sbt-bundle](https://github.com/sbt/sbt-bundle) documentation:
 
