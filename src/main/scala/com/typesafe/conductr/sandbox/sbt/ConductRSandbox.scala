@@ -275,7 +275,7 @@ object ConductRSandbox extends AutoPlugin {
       .map(_._2)
       .toSet
       .flatMap { endpoint: Endpoint =>
-        endpoint.services.map { uri =>
+        endpoint.services.getOrElse(Set.empty).map { uri =>
           if (uri.getHost != null) uri.getPort else uri.getAuthority.drop(1).toInt
         }.collect {
           case port if port >= 0 => port
