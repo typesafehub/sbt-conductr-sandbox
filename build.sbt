@@ -24,7 +24,7 @@ ScalariformKeys.preferences := ScalariformKeys.preferences.value
 
 resolvers += Resolver.bintrayRepo("typesafe", "maven-releases")
 
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.4.0")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.5.0")
 
 releaseSettings
 ReleaseKeys.versionBump := sbtrelease.Version.Bump.Minor
