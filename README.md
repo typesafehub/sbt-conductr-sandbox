@@ -158,8 +158,8 @@ As a convenience, `sandbox run` and `sandbox debug` is reporting each of the abo
 
 ConductR uses roles to load and scale bundles to the respective nodes. For more information about it please refer to [Managing services documentation](http://conductr.typesafe.com/docs/1.0.x/ManageServices#Roles).
 
-`sbt-conductr-sandbox` automatically collects the bundle roles specified with `BundleKeys.roles` and adds them to each ConductR node. Therefor, by default your bundles can be loaded and scaled to all ConductR nodes. 
-It is also possible to provide a custom role configuration by specifying the `SandboxKeys.conductrRoles` setting: 
+To keep things simple `sbt-conductr-sandbox` ignores roles by default. Therefore, your bundles can be loaded and scaled to all ConductR nodes. 
+To have more fine-grained control of the bundles it is also possible to provide a custom role configuration by specifying the `SandboxKeys.conductrRoles` setting: 
 
 ```scala
 SandboxKeys.conductrRoles in Global := Seq(Set("muchMem", "myDB"))

@@ -283,14 +283,9 @@ object ConductRSandbox extends AutoPlugin {
 
     val debugPorts = state.value.get(WithDebugAttrKey).fold(Set.empty[Int])(_ => debugPort.?.all(filter).value.flatten.toSet)
 
-    val roles = (conductrRoles in Global).value match {
-      case Nil                => Seq((BundleKeys.roles in Bundle).?.map(_.getOrElse(Set.empty)).all(filter).value.reduce(_ ++ _))
-      case conductrRolesValue => conductrRolesValue
-    }
-
     runConductRs(
       nrOfContainers,
-      roles,
+      (conductrRoles in Global).value,
       bundlePorts ++ featurePorts ++ debugPorts ++ (ports in Global).value,
       (envs in Global).value,
       conductrImage,
