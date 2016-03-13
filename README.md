@@ -8,6 +8,15 @@ sbt-conductr-sandbox aims to support the running of a Docker-based ConductR clus
 
 > Note that because the sandbox uses Docker, you cannot run bundles that also use Docker - Docker cannot run within Docker! If you have a Docker bundle then we recommend that you setup a VM for development and follow [the regular installation guide of our docs](http://conductr.typesafe.com/); perhaps just for a single node to make your setup a bit easier.
 
+## Prerequisites
+
+* [Docker](https://www.docker.com/)
+* [conductr-cli](http://conductr.lightbend.com/docs/1.1.x/CLI)
+
+Docker is required so that you can run the ConductR cluster as if it were running on a number of machines in your network. You won't need to understand much about Docker for ConductR other than installing it as described in its "Get Started" section. If you are on Windows or Mac then you will become familiar with `docker-machine` which is a utility that controls a virtual machine for the purposes of running Docker.
+
+The conductr-cli is used to communicate with the ConductR cluster.
+
 ## Usage
 
 1. Add `sbt-conductr-sandbox` to the `project/plugins.sbt`: 

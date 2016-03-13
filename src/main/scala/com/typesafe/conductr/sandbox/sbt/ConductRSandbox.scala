@@ -128,7 +128,6 @@ object ConductRSandbox extends AutoPlugin {
    * Run the ConductRs
    */
   def runConductRs(
-    conductrHostIp: String,
     nrOfContainers: Int,
     conductrRoles: Seq[Set[String]],
     allPorts: Set[Int],
@@ -147,7 +146,7 @@ object ConductRSandbox extends AutoPlugin {
         val containerName = s"$ConductrNamePrefix$i"
         val containerId = s"docker ps --quiet --filter name=$containerName".!!
         if (containerId.isEmpty) {
-          val portsDesc = allPorts.map(port => s"$conductrHostIp:${portMapping(i, port)}").mkString(", ")
+          val portsDesc = allPorts.map(port => s"${portMapping(i, port)}").mkString(", ")
           // Display the ports on the command line. Only if the user specifies a certain feature, then
           // the corresponding port will be displayed when running 'sandbox run' or 'sandbox debug'
           log.info(s"Starting container $containerName exposing $portsDesc...")
@@ -290,7 +289,6 @@ object ConductRSandbox extends AutoPlugin {
     }
 
     runConductRs(
-      (ConductRKeys.conductrControlServerUrl in Global).value.getHost,
       nrOfContainers,
       roles,
       bundlePorts ++ featurePorts ++ debugPorts ++ (ports in Global).value,
