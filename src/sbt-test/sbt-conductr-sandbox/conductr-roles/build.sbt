@@ -24,7 +24,7 @@ checkConductrRolesByBundle := {
   for (i <- 0 to 2) {
     val content = s"docker inspect --format='{{.Config.Env}}' cond-$i".!!
     val expectedContent = "CONDUCTR_ROLES=bundle-role-1,bundle-role-2"
-    content should include(expectedContent)
+    content should not include(expectedContent)
   }
 }
 
