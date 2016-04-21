@@ -2,6 +2,8 @@
 
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr-sandbox.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr-sandbox)
 
+# This plugin has been replaced by [sbt-conductr](https://github.com/typesafehub/sbt-conductr). Please use this instead.
+
 ## Introduction
 
 sbt-conductr-sandbox aims to support the running of a Docker-based ConductR cluster in the context of a build. The cluster can then be used to assist you in order to verify that endpoint declarations and other aspects of a bundle configuration are correct. The general idea is that this plugin will also support you when building your project on CI so that you may automatically verify that it runs on ConductR.
